@@ -26,14 +26,15 @@ public class SupabaseClientFactory : ISupabaseClientFactory
 
         var options = new SupabaseOptions
         {
-            AutoConnectRealtime = true
+            AutoConnectRealtime = true,
+            Headers = new Dictionary<string, string>
+            {
+                { "Authorization", $"Bearer {jwtToken}" }
+            }
         };
 
         var client = new Client(_settings.Url, _settings.AnonKey, options);
         await client.InitializeAsync();
-
-        // Set the user's JWT token for RLS enforcement
-        client.Auth.SetAuth(jwtToken);
 
         return client;
     }

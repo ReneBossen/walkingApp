@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using Supabase;
 using WalkingApp.Api.Common.Models;
 
 namespace WalkingApp.Api.Common.Middleware;
@@ -38,10 +37,10 @@ public class ExceptionHandlingMiddleware
 
         var (statusCode, message) = exception switch
         {
-            SupabaseException => (HttpStatusCode.BadRequest, "A database error occurred."),
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Unauthorized access."),
             ArgumentException => (HttpStatusCode.BadRequest, exception.Message),
             InvalidOperationException => (HttpStatusCode.BadRequest, exception.Message),
+            HttpRequestException => (HttpStatusCode.BadGateway, "A database error occurred."),
             _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.")
         };
 
