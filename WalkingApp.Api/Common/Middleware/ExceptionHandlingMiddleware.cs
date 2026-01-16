@@ -40,7 +40,7 @@ public class ExceptionHandlingMiddleware
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Unauthorized access."),
             ArgumentException => (HttpStatusCode.BadRequest, exception.Message),
             InvalidOperationException => (HttpStatusCode.BadRequest, exception.Message),
-            HttpRequestException => (HttpStatusCode.BadGateway, "A database error occurred."),
+            HttpRequestException => (HttpStatusCode.BadGateway, "An external service error occurred."),
             _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.")
         };
 
