@@ -1,9 +1,5 @@
 using Supabase;
 using WalkingApp.Api.Common.Database;
-using Supabase.Postgrest.Attributes;
-using Supabase.Postgrest.Models;
-using WalkingApp.Api.Users.DTOs;
-using System.Text.Json;
 
 namespace WalkingApp.Api.Users;
 
@@ -83,68 +79,17 @@ public class UserRepository : IUserRepository
 
     private async Task<Client> GetAuthenticatedClientAsync()
     {
-        var token = _httpContextAccessor.HttpContext?.Items["SupabaseToken"] as string;
+        if (_httpContextAccessor.HttpContext?.Items.TryGetValue("SupabaseToken", out var tokenObj) != true)
+        {
+            throw new UnauthorizedAccessException("User is not authenticated.");
+        }
 
+        var token = tokenObj as string;
         if (string.IsNullOrEmpty(token))
         {
             throw new UnauthorizedAccessException("User is not authenticated.");
         }
 
         return await _clientFactory.CreateClientAsync(token);
-    }
-}
-
-/// <summary>
-/// Entity model for Supabase users table.
-/// </summary>
-[Table("users")]
-internal class UserEntity : BaseModel
-{
-    [PrimaryKey("id", false)]
-    public Guid Id { get; set; }
-
-    [Column("display_name")]
-    public string DisplayName { get; set; } = string.Empty;
-
-    [Column("avatar_url")]
-    public string? AvatarUrl { get; set; }
-
-    [Column("preferences")]
-    public string PreferencesJson { get; set; } = "{}";
-
-    [Column("created_at")]
-    public DateTime CreatedAt { get; set; }
-
-    [Column("updated_at")]
-    public DateTime UpdatedAt { get; set; }
-
-    public User ToUser()
-    {
-        var preferences = string.IsNullOrWhiteSpace(PreferencesJson)
-            ? new UserPreferences()
-            : JsonSerializer.Deserialize<UserPreferences>(PreferencesJson) ?? new UserPreferences();
-
-        return new User
-        {
-            Id = Id,
-            DisplayName = DisplayName,
-            AvatarUrl = AvatarUrl,
-            Preferences = preferences,
-            CreatedAt = CreatedAt,
-            UpdatedAt = UpdatedAt
-        };
-    }
-
-    public static UserEntity FromUser(User user)
-    {
-        return new UserEntity
-        {
-            Id = user.Id,
-            DisplayName = user.DisplayName,
-            AvatarUrl = user.AvatarUrl,
-            PreferencesJson = JsonSerializer.Serialize(user.Preferences),
-            CreatedAt = user.CreatedAt,
-            UpdatedAt = user.UpdatedAt
-        };
     }
 }

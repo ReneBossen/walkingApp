@@ -7,6 +7,9 @@ namespace WalkingApp.Api.Users;
 /// </summary>
 public class UserService : IUserService
 {
+    private const string DefaultDisplayNamePrefix = "User_";
+    private const int DefaultDisplayNameMaxLength = 20;
+
     private readonly IUserRepository _userRepository;
 
     public UserService(IUserRepository userRepository)
@@ -60,7 +63,8 @@ public class UserService : IUserService
             existingUser.Preferences = request.Preferences;
         }
 
-        existingUser.UpdatedAt = DateTime.UtcNow;
+        // Note: UpdatedAt is automatically set by the database trigger (update_users_updated_at)
+        // No need to set it manually here
 
         var updatedUser = await _userRepository.UpdateAsync(existingUser);
 
@@ -82,10 +86,13 @@ public class UserService : IUserService
             return MapToGetProfileResponse(existingUser);
         }
 
+        var defaultName = $"{DefaultDisplayNamePrefix}{userId:N}";
         var newUser = new User
         {
             Id = userId,
-            DisplayName = $"User_{userId:N}".Substring(0, 20),
+            DisplayName = defaultName.Length > DefaultDisplayNameMaxLength
+                ? defaultName.Substring(0, DefaultDisplayNameMaxLength)
+                : defaultName,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             Preferences = new UserPreferences()
@@ -96,6 +103,14 @@ public class UserService : IUserService
         return MapToGetProfileResponse(createdUser);
     }
 
+    /// <summary>
+    /// Validates the update profile request.
+    /// </summary>
+    /// <remarks>
+    /// Future considerations:
+    /// - Add rate limiting to prevent abuse of profile updates (e.g., max 10 updates per hour)
+    /// - Add profanity filter for display name validation to prevent inappropriate content
+    /// </remarks>
     private static void ValidateUpdateProfileRequest(UpdateProfileRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.DisplayName))

@@ -63,7 +63,7 @@ public class UserRepositoryTests
     #region Authentication Token Tests
 
     [Fact]
-    public async Task GetByIdAsync_WithMissingTokenKey_ThrowsKeyNotFoundException()
+    public async Task GetByIdAsync_WithMissingTokenKey_ThrowsUnauthorizedAccessException()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -75,9 +75,8 @@ public class UserRepositoryTests
         var act = async () => await sut.GetByIdAsync(userId);
 
         // Assert
-        // Note: The implementation throws KeyNotFoundException when the key doesn't exist in Items
-        // This could be improved to return UnauthorizedAccessException instead
-        await act.Should().ThrowAsync<KeyNotFoundException>();
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("User is not authenticated.");
         _mockClientFactory.Verify(x => x.CreateClientAsync(It.IsAny<string>()), Times.Never);
     }
 
@@ -166,7 +165,7 @@ public class UserRepositoryTests
     }
 
     [Fact]
-    public async Task CreateAsync_WithMissingTokenKey_ThrowsKeyNotFoundException()
+    public async Task CreateAsync_WithMissingTokenKey_ThrowsUnauthorizedAccessException()
     {
         // Arrange
         var user = CreateTestUser();
@@ -178,8 +177,8 @@ public class UserRepositoryTests
         var act = async () => await sut.CreateAsync(user);
 
         // Assert
-        // Note: The implementation throws KeyNotFoundException when the key doesn't exist in Items
-        await act.Should().ThrowAsync<KeyNotFoundException>();
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("User is not authenticated.");
         _mockClientFactory.Verify(x => x.CreateClientAsync(It.IsAny<string>()), Times.Never);
     }
 
@@ -207,7 +206,7 @@ public class UserRepositoryTests
     }
 
     [Fact]
-    public async Task UpdateAsync_WithMissingTokenKey_ThrowsKeyNotFoundException()
+    public async Task UpdateAsync_WithMissingTokenKey_ThrowsUnauthorizedAccessException()
     {
         // Arrange
         var user = CreateTestUser();
@@ -219,8 +218,8 @@ public class UserRepositoryTests
         var act = async () => await sut.UpdateAsync(user);
 
         // Assert
-        // Note: The implementation throws KeyNotFoundException when the key doesn't exist in Items
-        await act.Should().ThrowAsync<KeyNotFoundException>();
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("User is not authenticated.");
         _mockClientFactory.Verify(x => x.CreateClientAsync(It.IsAny<string>()), Times.Never);
     }
 

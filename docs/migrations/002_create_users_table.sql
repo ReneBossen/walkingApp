@@ -1,6 +1,16 @@
 -- Migration: Create users table
 -- Description: Creates the users table for storing user profile data linked to Supabase Auth
 -- Date: 2026-01-16
+--
+-- Execution Instructions:
+-- 1. Log in to Supabase Dashboard (https://app.supabase.com)
+-- 2. Navigate to your project
+-- 3. Go to the SQL Editor section
+-- 4. Create a new query
+-- 5. Copy and paste this entire migration script
+-- 6. Click "Run" to execute the migration
+-- 7. Verify the tables, policies, and triggers were created successfully
+-- 8. Test with a simple SELECT query: SELECT * FROM users LIMIT 1;
 
 -- Create users table
 CREATE TABLE users (
@@ -35,16 +45,17 @@ CREATE POLICY "Users can insert own profile"
     WITH CHECK (auth.uid() = id);
 
 -- RLS Policy: Users can view friends' profiles (for social features)
--- Note: This policy depends on the friendships table which will be created in a future migration
--- It's included here for completeness but won't be effective until Plan 4 is implemented
-CREATE POLICY "Users can view friends profiles"
-    ON users FOR SELECT
-    USING (
-        id IN (
-            SELECT friend_id FROM friendships
-            WHERE user_id = auth.uid() AND status = 'accepted'
-        )
-    );
+-- Note: This policy will be added in the friendships migration (Plan 4)
+-- Uncommented here because the friendships table doesn't exist yet and would cause the policy to fail
+--
+-- CREATE POLICY "Users can view friends profiles"
+--     ON users FOR SELECT
+--     USING (
+--         id IN (
+--             SELECT friend_id FROM friendships
+--             WHERE user_id = auth.uid() AND status = 'accepted'
+--         )
+--     );
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()

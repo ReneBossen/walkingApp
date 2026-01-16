@@ -363,12 +363,12 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task UpdateProfileAsync_SetsUpdatedAtTimestamp()
+    public async Task UpdateProfileAsync_DoesNotSetUpdatedAtTimestamp()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var existingUser = CreateTestUser(userId);
-        var beforeUpdate = DateTime.UtcNow;
+        var originalUpdatedAt = existingUser.UpdatedAt;
         var request = new UpdateProfileRequest { DisplayName = "New Name" };
 
         _mockRepository.Setup(x => x.GetByIdAsync(userId))
@@ -380,8 +380,9 @@ public class UserServiceTests
         await _sut.UpdateProfileAsync(userId, request);
 
         // Assert
+        // UpdatedAt should not be modified by the service - it's handled by the database trigger
         _mockRepository.Verify(x => x.UpdateAsync(It.Is<User>(u =>
-            u.UpdatedAt >= beforeUpdate && u.UpdatedAt <= DateTime.UtcNow
+            u.UpdatedAt == originalUpdatedAt
         )), Times.Once);
     }
 
