@@ -181,7 +181,7 @@ public class StepsController : ControllerBase
         {
             return NotFound(ApiResponse<StepEntryResponse>.ErrorResponse(ex.Message));
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
@@ -222,7 +222,7 @@ public class StepsController : ControllerBase
 
             return NoContent();
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
