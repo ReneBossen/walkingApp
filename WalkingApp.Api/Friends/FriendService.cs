@@ -1,6 +1,4 @@
 using WalkingApp.Api.Friends.DTOs;
-using WalkingApp.Api.Steps;
-using WalkingApp.Api.Steps.DTOs;
 using WalkingApp.Api.Users;
 
 namespace WalkingApp.Api.Friends;
@@ -12,20 +10,16 @@ public class FriendService : IFriendService
 {
     private readonly IFriendRepository _friendRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IStepRepository _stepRepository;
 
     public FriendService(
         IFriendRepository friendRepository,
-        IUserRepository userRepository,
-        IStepRepository stepRepository)
+        IUserRepository userRepository)
     {
         ArgumentNullException.ThrowIfNull(friendRepository);
         ArgumentNullException.ThrowIfNull(userRepository);
-        ArgumentNullException.ThrowIfNull(stepRepository);
 
         _friendRepository = friendRepository;
         _userRepository = userRepository;
-        _stepRepository = stepRepository;
     }
 
     /// <inheritdoc />
@@ -259,37 +253,9 @@ public class FriendService : IFriendService
             throw new KeyNotFoundException($"Friend not found: {friendId}");
         }
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
-        // Get Monday of current week
-        var daysFromMonday = (int)today.DayOfWeek - (int)DayOfWeek.Monday;
-        if (daysFromMonday < 0)
-        {
-            daysFromMonday += 7;
-        }
-        var weekStart = today.AddDays(-daysFromMonday);
-
-        // Get today's steps
-        var todaySteps = await _stepRepository.GetByDateAsync(friendId, today);
-        var todayTotal = todaySteps.Sum(e => e.StepCount);
-
-        // Get weekly steps
-        var weekRange = new DateRange
-        {
-            StartDate = weekStart,
-            EndDate = today
-        };
-
-        var weeklySummaries = await _stepRepository.GetDailySummariesAsync(friendId, weekRange);
-        var weeklyTotal = weeklySummaries.Sum(s => s.TotalSteps);
-
-        return new FriendStepsResponse
-        {
-            FriendId = friendId,
-            DisplayName = friendProfile.DisplayName,
-            TodaySteps = todayTotal,
-            WeeklySteps = weeklyTotal
-        };
+        // TODO: This functionality requires the Steps feature (Plan 3) to be implemented first.
+        // Once IStepRepository is available, this method will query step data and return it.
+        throw new NotImplementedException("Friend steps viewing will be available once the Steps feature (Plan 3) is implemented.");
     }
 
     /// <inheritdoc />
