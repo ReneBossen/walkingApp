@@ -5,6 +5,6 @@ namespace WalkingApp.Api.Steps.DTOs;
 /// </summary>
 public class DateRange
 {
-    public DateOnly StartDate { get; set; }
-    public DateOnly EndDate { get; set; }
+    public DateOnly StartDate { get; init; }
+    public DateOnly EndDate { get; init; }
 }
