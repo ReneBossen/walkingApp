@@ -46,6 +46,8 @@ internal class StepEntryEntity : BaseModel
 
     public static StepEntryEntity FromStepEntry(StepEntry stepEntry)
     {
+        ArgumentNullException.ThrowIfNull(stepEntry);
+
         return new StepEntryEntity
         {
             Id = stepEntry.Id,
