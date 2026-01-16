@@ -77,8 +77,10 @@ public class SupabaseAuthMiddleware
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = false,
-                ValidateAudience = false,
+                ValidateIssuer = true,
+                ValidIssuer = _settings.JwtIssuer,
+                ValidateAudience = true,
+                ValidAudience = _settings.JwtAudience,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(5)
             };

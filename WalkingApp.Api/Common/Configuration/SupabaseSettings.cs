@@ -19,4 +19,16 @@ public class SupabaseSettings
     /// The JWT secret used to validate Supabase authentication tokens.
     /// </summary>
     public required string JwtSecret { get; init; }
+
+    /// <summary>
+    /// The JWT issuer to validate in authentication tokens.
+    /// Typically the Supabase auth endpoint URL.
+    /// </summary>
+    public required string JwtIssuer { get; init; }
+
+    /// <summary>
+    /// The JWT audience to validate in authentication tokens.
+    /// Typically "authenticated" for Supabase.
+    /// </summary>
+    public required string JwtAudience { get; init; }
 }
