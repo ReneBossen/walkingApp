@@ -5,10 +5,9 @@
       "Microsoft.AspNetCore": "Warning"
     }
   },
-  "AllowedHosts": "*",
   "Supabase": {
-    "Url": "",
-    "AnonKey": "",
-    "JwtSecret": ""
+    "Url": "https://your-project-ref.supabase.co",
+    "AnonKey": "your-anon-key-here",
+    "JwtSecret": "your-jwt-secret-here"
   }
 }
