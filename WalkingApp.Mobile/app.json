@@ -29,7 +29,9 @@
       "favicon": "./assets/favicon.png"
     },
     "scheme": "walkingapp",
-    "plugins": [],
+    "plugins": [
+      "expo-secure-store"
+    ],
     "extra": {
       "eas": {
         "projectId": "98e5123e-bcac-42ad-8639-279de66998c5"
