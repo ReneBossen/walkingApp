@@ -225,6 +225,68 @@ public class UserRepositoryTests
 
     #endregion
 
+    #region GetByIdsAsync Validation Tests
+
+    [Fact]
+    public async Task GetByIdsAsync_WithNullUserIds_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var items = new Dictionary<object, object?>
+        {
+            { "SupabaseToken", "test-token" }
+        };
+        _mockHttpContext.Setup(x => x.Items).Returns(items);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        var sut = new UserRepository(_mockClientFactory.Object, _mockHttpContextAccessor.Object);
+
+        // Act
+        var act = async () => await sut.GetByIdsAsync(null!);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task GetByIdsAsync_WithEmptyList_ReturnsEmptyList()
+    {
+        // Arrange
+        var items = new Dictionary<object, object?>
+        {
+            { "SupabaseToken", "test-token" }
+        };
+        _mockHttpContext.Setup(x => x.Items).Returns(items);
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        var sut = new UserRepository(_mockClientFactory.Object, _mockHttpContextAccessor.Object);
+
+        // Act
+        var result = await sut.GetByIdsAsync(new List<Guid>());
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+        _mockClientFactory.Verify(x => x.CreateClientAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByIdsAsync_WithMissingTokenKey_ThrowsUnauthorizedAccessException()
+    {
+        // Arrange
+        var userIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+        _mockHttpContext.Setup(x => x.Items).Returns(new Dictionary<object, object?>());
+        _mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(_mockHttpContext.Object);
+        var sut = new UserRepository(_mockClientFactory.Object, _mockHttpContextAccessor.Object);
+
+        // Act
+        var act = async () => await sut.GetByIdsAsync(userIds);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("User is not authenticated.");
+        _mockClientFactory.Verify(x => x.CreateClientAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static User CreateTestUser()

@@ -77,6 +77,28 @@ public class UserRepository : IUserRepository
         return updated.ToUser();
     }
 
+    /// <inheritdoc />
+    public async Task<List<User>> GetByIdsAsync(List<Guid> userIds)
+    {
+        ArgumentNullException.ThrowIfNull(userIds);
+
+        if (userIds.Count == 0)
+        {
+            return new List<User>();
+        }
+
+        var client = await GetAuthenticatedClientAsync();
+
+        // Build IN clause filter - format: "id.in.(uuid1,uuid2,uuid3)"
+        var idsString = string.Join(",", userIds);
+        var response = await client
+            .From<UserEntity>()
+            .Filter("id", Supabase.Postgrest.Constants.Operator.In, $"({idsString})")
+            .Get();
+
+        return response.Models.Select(e => e.ToUser()).ToList();
+    }
+
     private async Task<Client> GetAuthenticatedClientAsync()
     {
         if (_httpContextAccessor.HttpContext?.Items.TryGetValue("SupabaseToken", out var tokenObj) != true)
