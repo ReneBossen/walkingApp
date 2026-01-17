@@ -558,29 +558,138 @@ public class FriendsControllerTests
 
     #endregion
 
-    #region GetFriendSteps Tests
+    #region GetFriend Tests
 
     [Fact]
-    public async Task GetFriendSteps_WithAuthenticatedUser_ReturnsNotImplemented()
+    public async Task GetFriend_WithValidFriendId_ReturnsOkWithFriendProfile()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var friendId = Guid.NewGuid();
+        var friendResponse = new FriendResponse
+        {
+            UserId = friendId,
+            DisplayName = "Friend User",
+            AvatarUrl = "https://example.com/avatar.jpg",
+            FriendsSince = DateTime.UtcNow.AddDays(-30)
+        };
+        SetupAuthenticatedUser(userId);
+
+        _mockFriendService.Setup(x => x.GetFriendAsync(userId, friendId))
+            .ReturnsAsync(friendResponse);
+
+        // Act
+        var result = await _sut.GetFriend(friendId);
+
+        // Assert
+        result.Should().NotBeNull();
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<FriendResponse>>().Subject;
+        apiResponse.Success.Should().BeTrue();
+        apiResponse.Data.Should().NotBeNull();
+        apiResponse.Data!.UserId.Should().Be(friendId);
+        apiResponse.Data.DisplayName.Should().Be("Friend User");
+        _mockFriendService.Verify(x => x.GetFriendAsync(userId, friendId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetFriend_WithUnauthenticatedUser_ReturnsUnauthorized()
+    {
+        // Arrange
+        var friendId = Guid.NewGuid();
+        SetupUnauthenticatedUser();
+
+        // Act
+        var result = await _sut.GetFriend(friendId);
+
+        // Assert
+        result.Should().NotBeNull();
+        var unauthorizedResult = result.Result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        var apiResponse = unauthorizedResult.Value.Should().BeOfType<ApiResponse<FriendResponse>>().Subject;
+        apiResponse.Success.Should().BeFalse();
+        apiResponse.Errors.Should().Contain("User is not authenticated.");
+        _mockFriendService.Verify(x => x.GetFriendAsync(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetFriend_WithNonExistentFriend_ReturnsNotFound()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var friendId = Guid.NewGuid();
         SetupAuthenticatedUser(userId);
 
+        _mockFriendService.Setup(x => x.GetFriendAsync(userId, friendId))
+            .ThrowsAsync(new KeyNotFoundException("Friend not found."));
+
+        // Act
+        var result = await _sut.GetFriend(friendId);
+
+        // Assert
+        result.Should().NotBeNull();
+        var notFoundResult = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        var apiResponse = notFoundResult.Value.Should().BeOfType<ApiResponse<FriendResponse>>().Subject;
+        apiResponse.Success.Should().BeFalse();
+        apiResponse.Errors.Should().Contain("Friend not found.");
+    }
+
+    [Fact]
+    public async Task GetFriend_WithPendingFriendship_ReturnsNotFound()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var friendId = Guid.NewGuid();
+        SetupAuthenticatedUser(userId);
+
+        _mockFriendService.Setup(x => x.GetFriendAsync(userId, friendId))
+            .ThrowsAsync(new KeyNotFoundException("Friend not found."));
+
+        // Act
+        var result = await _sut.GetFriend(friendId);
+
+        // Assert
+        result.Should().NotBeNull();
+        var notFoundResult = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        var apiResponse = notFoundResult.Value.Should().BeOfType<ApiResponse<FriendResponse>>().Subject;
+        apiResponse.Success.Should().BeFalse();
+        apiResponse.Errors.Should().Contain("Friend not found.");
+    }
+
+    #endregion
+
+    #region GetFriendSteps Tests
+
+    [Fact]
+    public async Task GetFriendSteps_WithValidFriendId_ReturnsOkWithFriendSteps()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var friendId = Guid.NewGuid();
+        var friendStepsResponse = new FriendStepsResponse
+        {
+            FriendId = friendId,
+            DisplayName = "Friend User",
+            TodaySteps = 5000,
+            WeeklySteps = 35000
+        };
+        SetupAuthenticatedUser(userId);
+
         _mockFriendService.Setup(x => x.GetFriendStepsAsync(userId, friendId))
-            .ThrowsAsync(new NotImplementedException("Friend steps viewing will be available once the Steps feature (Plan 3) is implemented."));
+            .ReturnsAsync(friendStepsResponse);
 
         // Act
         var result = await _sut.GetFriendSteps(friendId);
 
         // Assert
         result.Should().NotBeNull();
-        var statusCodeResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
-        statusCodeResult.StatusCode.Should().Be(501);
-        var apiResponse = statusCodeResult.Value.Should().BeOfType<ApiResponse<FriendStepsResponse>>().Subject;
-        apiResponse.Success.Should().BeFalse();
-        apiResponse.Errors.Should().Contain("Friend steps viewing will be available once the Steps feature (Plan 3) is implemented.");
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var apiResponse = okResult.Value.Should().BeOfType<ApiResponse<FriendStepsResponse>>().Subject;
+        apiResponse.Success.Should().BeTrue();
+        apiResponse.Data.Should().NotBeNull();
+        apiResponse.Data!.FriendId.Should().Be(friendId);
+        apiResponse.Data.TodaySteps.Should().Be(5000);
+        apiResponse.Data.WeeklySteps.Should().Be(35000);
+        _mockFriendService.Verify(x => x.GetFriendStepsAsync(userId, friendId), Times.Once);
     }
 
     [Fact]

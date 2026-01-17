@@ -727,6 +727,180 @@ public class FriendServiceTests
 
     #endregion
 
+    #region GetFriendAsync Tests
+
+    [Fact]
+    public async Task GetFriendAsync_WithValidAcceptedFriend_ReturnsFriendResponse()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var friendId = Guid.NewGuid();
+        var friendship = CreateTestFriendship(userId, friendId, FriendshipStatus.Accepted);
+        var friend = CreateTestUser(friendId, "Friend User");
+
+        _mockFriendRepository.Setup(x => x.GetFriendshipAsync(userId, friendId))
+            .ReturnsAsync(friendship);
+        _mockUserRepository.Setup(x => x.GetByIdAsync(friendId))
+            .ReturnsAsync(friend);
+
+        // Act
+        var result = await _sut.GetFriendAsync(userId, friendId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.UserId.Should().Be(friendId);
+        result.DisplayName.Should().Be("Friend User");
+        result.AvatarUrl.Should().Be("https://example.com/avatar.jpg");
+        result.FriendsSince.Should().Be(friendship.AcceptedAt ?? friendship.CreatedAt);
+        _mockFriendRepository.Verify(x => x.GetFriendshipAsync(userId, friendId), Times.Once);
+        _mockUserRepository.Verify(x => x.GetByIdAsync(friendId), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetFriendAsync_WithEmptyUserId_ThrowsArgumentException()
+    {
+        // Arrange
+        var friendId = Guid.NewGuid();
+
+        // Act
+        var act = async () => await _sut.GetFriendAsync(Guid.Empty, friendId);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("User ID cannot be empty.*");
+        _mockFriendRepository.Verify(x => x.GetFriendshipAsync(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetFriendAsync_WithEmptyFriendId_ThrowsArgumentException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+
+        // Act
+        var act = async () => await _sut.GetFriendAsync(userId, Guid.Empty);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Friend ID cannot be empty.*");
+        _mockFriendRepository.Verify(x => x.GetFriendshipAsync(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetFriendAsync_WithNonExistentFriendship_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var friendId = Guid.NewGuid();
+
+        _mockFriendRepository.Setup(x => x.GetFriendshipAsync(userId, friendId))
+            .ReturnsAsync((Friendship?)null);
+
+        // Act
+        var act = async () => await _sut.GetFriendAsync(userId, friendId);
+
+        // Assert
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Friend not found.");
+        _mockFriendRepository.Verify(x => x.GetFriendshipAsync(userId, friendId), Times.Once);
+        _mockUserRepository.Verify(x => x.GetByIdAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetFriendAsync_WithPendingFriendship_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var friendId = Guid.NewGuid();
+        var friendship = CreateTestFriendship(userId, friendId, FriendshipStatus.Pending);
+
+        _mockFriendRepository.Setup(x => x.GetFriendshipAsync(userId, friendId))
+            .ReturnsAsync(friendship);
+
+        // Act
+        var act = async () => await _sut.GetFriendAsync(userId, friendId);
+
+        // Assert
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Friend not found.");
+        _mockFriendRepository.Verify(x => x.GetFriendshipAsync(userId, friendId), Times.Once);
+        _mockUserRepository.Verify(x => x.GetByIdAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetFriendAsync_WithNonExistentFriendProfile_ThrowsKeyNotFoundException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var friendId = Guid.NewGuid();
+        var friendship = CreateTestFriendship(userId, friendId, FriendshipStatus.Accepted);
+
+        _mockFriendRepository.Setup(x => x.GetFriendshipAsync(userId, friendId))
+            .ReturnsAsync(friendship);
+        _mockUserRepository.Setup(x => x.GetByIdAsync(friendId))
+            .ReturnsAsync((User?)null);
+
+        // Act
+        var act = async () => await _sut.GetFriendAsync(userId, friendId);
+
+        // Assert
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage($"Friend profile not found: {friendId}");
+        _mockUserRepository.Verify(x => x.GetByIdAsync(friendId), Times.Once);
+    }
+
+    #endregion
+
+    #region GetFriendStepsAsync - Additional Edge Cases
+
+    [Fact]
+    public async Task GetFriendStepsAsync_WithNoStepData_ReturnsZeroSteps()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var friendId = Guid.NewGuid();
+        var friendship = CreateTestFriendship(userId, friendId, FriendshipStatus.Accepted);
+        var friend = CreateTestUser(friendId, "Friend User");
+
+        _mockFriendRepository.Setup(x => x.GetFriendshipAsync(userId, friendId))
+            .ReturnsAsync(friendship);
+        _mockUserRepository.Setup(x => x.GetByIdAsync(friendId))
+            .ReturnsAsync(friend);
+        _mockStepRepository.Setup(x => x.GetDailySummariesAsync(friendId, It.IsAny<Api.Steps.DTOs.DateRange>()))
+            .ReturnsAsync(new List<Api.Steps.DailyStepSummary>());
+
+        // Act
+        var result = await _sut.GetFriendStepsAsync(userId, friendId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.FriendId.Should().Be(friendId);
+        result.DisplayName.Should().Be("Friend User");
+        result.TodaySteps.Should().Be(0);
+        result.WeeklySteps.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetFriendStepsAsync_WithRejectedFriendship_ThrowsUnauthorizedAccessException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var friendId = Guid.NewGuid();
+        var friendship = CreateTestFriendship(userId, friendId, FriendshipStatus.Rejected);
+
+        _mockFriendRepository.Setup(x => x.GetFriendshipAsync(userId, friendId))
+            .ReturnsAsync(friendship);
+
+        // Act
+        var act = async () => await _sut.GetFriendStepsAsync(userId, friendId);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("You can only view steps of accepted friends.");
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static User CreateTestUser(Guid userId, string displayName)
