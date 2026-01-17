@@ -123,16 +123,13 @@ export default function PreferencesSetupScreen({ navigation }: PreferencesSetupS
                 value: 'metric',
                 label: 'Metric',
                 icon: units === 'metric' ? 'check' : undefined,
-                testID: 'units-metric-button',
               },
               {
                 value: 'imperial',
                 label: 'Imperial',
                 icon: units === 'imperial' ? 'check' : undefined,
-                testID: 'units-imperial-button',
               },
             ]}
-            testID="units-segmented-buttons"
           />
         </View>
 

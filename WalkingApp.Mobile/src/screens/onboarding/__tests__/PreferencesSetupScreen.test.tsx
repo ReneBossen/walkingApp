@@ -77,14 +77,16 @@ jest.mock('@react-native-community/slider', () => {
   );
 });
 
-const actualRN = jest.requireActual('react-native');
-jest.mock('react-native', () => ({
-  ...actualRN,
-  ScrollView: ({ children, ...props }: any) => {
-    const React = require('react');
-    return React.createElement(actualRN.View, props, children);
-  },
-}));
+jest.mock('react-native', () => {
+  const actualRN = jest.requireActual('react-native');
+  return {
+    ...actualRN,
+    ScrollView: ({ children, ...props }: any) => {
+      const React = require('react');
+      return React.createElement(actualRN.View, props, children);
+    },
+  };
+});
 
 jest.mock('../components/OnboardingLayout', () => {
   const RN = jest.requireActual('react-native');

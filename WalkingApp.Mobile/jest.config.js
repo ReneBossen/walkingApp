@@ -28,6 +28,7 @@ module.exports = {
     '^@env$': '<rootDir>/__mocks__/env.ts',
     '^react-native$': '<rootDir>/__mocks__/react-native.ts',
     '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.ts',
+    '^expo-sensors$': '<rootDir>/__mocks__/expo-sensors.ts',
   },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

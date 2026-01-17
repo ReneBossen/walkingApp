@@ -24,14 +24,16 @@ jest.mock('react-native-paper', () => {
   };
 });
 
-const actualRN = jest.requireActual('react-native');
-jest.mock('react-native', () => ({
-  ...actualRN,
-  ScrollView: ({ children, ...props }: any) => {
-    const React = require('react');
-    return React.createElement(actualRN.View, props, children);
-  },
-}));
+jest.mock('react-native', () => {
+  const actualRN = jest.requireActual('react-native');
+  return {
+    ...actualRN,
+    ScrollView: ({ children, ...props }: any) => {
+      const React = require('react');
+      return React.createElement(actualRN.View, props, children);
+    },
+  };
+});
 
 jest.mock('../components/OnboardingLayout', () => {
   const RN = jest.requireActual('react-native');
@@ -66,12 +68,15 @@ describe('PermissionsScreen', () => {
   const mockRoute = {} as any;
 
   const mockRequestNotificationPermission = jest.fn();
+  const mockRequestActivityPermission = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockUsePermissions.mockReturnValue({
       notificationPermissionStatus: 'undetermined',
+      activityPermissionStatus: 'undetermined',
       requestNotificationPermission: mockRequestNotificationPermission,
+      requestActivityPermission: mockRequestActivityPermission,
     });
   });
 
@@ -147,7 +152,9 @@ describe('PermissionsScreen', () => {
     it('PermissionsScreen_WithGrantedStatus_PassesStatusToCard', () => {
       mockUsePermissions.mockReturnValue({
         notificationPermissionStatus: 'granted',
+        activityPermissionStatus: 'undetermined',
         requestNotificationPermission: mockRequestNotificationPermission,
+        requestActivityPermission: mockRequestActivityPermission,
       });
 
       const { getByText } = render(
@@ -160,7 +167,9 @@ describe('PermissionsScreen', () => {
     it('PermissionsScreen_WithDeniedStatus_PassesStatusToCard', () => {
       mockUsePermissions.mockReturnValue({
         notificationPermissionStatus: 'denied',
+        activityPermissionStatus: 'undetermined',
         requestNotificationPermission: mockRequestNotificationPermission,
+        requestActivityPermission: mockRequestActivityPermission,
       });
 
       const { getByText } = render(
@@ -243,7 +252,9 @@ describe('PermissionsScreen', () => {
 
       mockUsePermissions.mockReturnValue({
         notificationPermissionStatus: 'granted',
+        activityPermissionStatus: 'undetermined',
         requestNotificationPermission: mockRequestNotificationPermission,
+        requestActivityPermission: mockRequestActivityPermission,
       });
 
       rerender(<PermissionsScreen navigation={mockNavigation} route={mockRoute} />);
