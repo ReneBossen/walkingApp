@@ -205,6 +205,35 @@ public class FriendsController : ControllerBase
     }
 
     /// <summary>
+    /// Gets a specific friend's profile.
+    /// </summary>
+    /// <param name="friendId">The ID of the friend.</param>
+    /// <returns>The friend's profile.</returns>
+    [HttpGet("{friendId}")]
+    public async Task<ActionResult<ApiResponse<FriendResponse>>> GetFriend(Guid friendId)
+    {
+        var userId = User.GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized(ApiResponse<FriendResponse>.ErrorResponse("User is not authenticated."));
+        }
+
+        try
+        {
+            var result = await _friendService.GetFriendAsync(userId.Value, friendId);
+            return Ok(ApiResponse<FriendResponse>.SuccessResponse(result));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<FriendResponse>.ErrorResponse(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<FriendResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
     /// Gets a friend's step data.
     /// Note: This endpoint will be fully functional once the Steps feature (Plan 3) is implemented.
     /// </summary>

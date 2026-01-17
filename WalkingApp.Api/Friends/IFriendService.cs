@@ -66,4 +66,12 @@ public interface IFriendService
     /// <param name="userId">The ID of the user removing the friend.</param>
     /// <param name="friendId">The ID of the friend to remove.</param>
     Task RemoveFriendAsync(Guid userId, Guid friendId);
+
+    /// <summary>
+    /// Gets a specific friend's profile.
+    /// </summary>
+    /// <param name="userId">The ID of the user requesting the friend's profile.</param>
+    /// <param name="friendId">The ID of the friend.</param>
+    /// <returns>The friend's profile.</returns>
+    Task<FriendResponse> GetFriendAsync(Guid userId, Guid friendId);
 }
