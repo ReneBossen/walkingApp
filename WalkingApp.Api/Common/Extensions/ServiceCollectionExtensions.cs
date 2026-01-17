@@ -1,6 +1,7 @@
 using WalkingApp.Api.Common.Configuration;
 using WalkingApp.Api.Common.Database;
 using WalkingApp.Api.Friends;
+using WalkingApp.Api.Friends.Discovery;
 using WalkingApp.Api.Groups;
 using WalkingApp.Api.Steps;
 using WalkingApp.Api.Users;
@@ -64,6 +65,10 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<IFriendRepository, FriendRepository>();
         services.AddScoped<IFriendService, FriendService>();
+
+        // Add friend discovery services
+        services.AddScoped<IInviteCodeRepository, InviteCodeRepository>();
+        services.AddScoped<IFriendDiscoveryService, FriendDiscoveryService>();
 
         return services;
     }
