@@ -15,32 +15,51 @@ const linking = {
   prefixes: ['walkingapp://', 'https://walkingapp.com'],
   config: {
     screens: {
-      Auth: {
-        screens: {
-          Login: 'login',
-          Register: 'register',
-          ForgotPassword: 'forgot-password',
-        },
-      },
+      Auth: 'auth',
       Main: {
+        path: 'main',
         screens: {
           Tabs: {
             screens: {
               FriendsTab: {
                 screens: {
+                  FriendsList: 'friends',
+                  FriendDiscovery: 'friends/discover',
                   UserProfile: 'user/:userId',
                 },
               },
               GroupsTab: {
                 screens: {
+                  GroupsList: 'groups',
                   GroupDetail: 'group/:groupId',
                   JoinGroup: 'join/:inviteCode',
+                  CreateGroup: 'groups/create',
+                  GroupManagement: 'group/:groupId/manage',
+                },
+              },
+              HomeTab: {
+                screens: {
+                  Home: 'home',
+                },
+              },
+              StepsTab: {
+                screens: {
+                  StepsHistory: 'steps',
+                },
+              },
+              SettingsTab: {
+                screens: {
+                  Settings: 'settings',
+                  Profile: 'settings/profile',
+                  EditProfile: 'settings/profile/edit',
                 },
               },
             },
           },
+          Notifications: 'notifications',
         },
       },
+      Onboarding: 'onboarding',
     },
   },
 };
