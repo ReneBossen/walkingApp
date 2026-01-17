@@ -233,9 +233,9 @@ public class FriendDiscoveryService : IFriendDiscoveryService
         }
 
         // Send friend request using existing FriendService
-        await _friendService.SendFriendRequestAsync(userId, new DTOs.SendFriendRequestRequest
+        await _friendService.SendFriendRequestAsync(userId, new Friends.DTOs.SendFriendRequestRequest
         {
-            FriendId = validation.UserId
+            FriendUserId = validation.UserId
         });
     }
 
