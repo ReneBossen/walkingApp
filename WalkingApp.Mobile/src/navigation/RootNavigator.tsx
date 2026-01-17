@@ -74,48 +74,88 @@ const linking = {
 export default function RootNavigator() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [authError, setAuthError] = useState<Error | null>(null);
 
   useEffect(() => {
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      // Check if user needs onboarding (check user metadata)
-      if (session?.user?.user_metadata?.onboarding_completed === false) {
-        setNeedsOnboarding(true);
-      }
-    });
+        if (error) {
+          console.error('Error getting session:', error);
+          setAuthError(error);
+          setIsAuthenticated(false);
+          return;
+        }
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
+        setIsAuthenticated(!!session);
+        setAuthError(null);
 
-      if (event === 'SIGNED_IN' && session?.user) {
-        // Check onboarding status
-        if (session.user.user_metadata?.onboarding_completed === false) {
+        // Check if user needs onboarding (check user metadata)
+        if (session?.user?.user_metadata?.onboarding_completed === false) {
           setNeedsOnboarding(true);
         }
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+        setAuthError(error instanceof Error ? error : new Error('Unknown auth error'));
+        setIsAuthenticated(false);
       }
+    };
 
-      if (event === 'SIGNED_OUT') {
-        setNeedsOnboarding(false);
+    initializeAuth();
+
+    // Listen for auth changes
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    try {
+      const {
+        data: { subscription: authSubscription },
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        try {
+          setIsAuthenticated(!!session);
+          setAuthError(null);
+
+          if (event === 'SIGNED_IN' && session?.user) {
+            // Check onboarding status
+            if (session.user.user_metadata?.onboarding_completed === false) {
+              setNeedsOnboarding(true);
+            }
+          }
+
+          if (event === 'SIGNED_OUT') {
+            setNeedsOnboarding(false);
+          }
+        } catch (error) {
+          console.error('Error handling auth state change:', error);
+          setAuthError(error instanceof Error ? error : new Error('Auth state change error'));
+        }
+      });
+
+      subscription = authSubscription;
+    } catch (error) {
+      console.error('Failed to subscribe to auth changes:', error);
+      setAuthError(error instanceof Error ? error : new Error('Auth subscription error'));
+    }
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
       }
-    });
-
-    return () => subscription.unsubscribe();
+    };
   }, []);
 
   // Show loading or splash screen while checking auth
-  if (isAuthenticated === null) {
+  if (isAuthenticated === null && !authError) {
     return null; // Or <SplashScreen />
   }
 
+  // Show auth screen on error to allow retry
+  // The auth screen can handle login/registration which will reset the error state
   return (
     <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
+        {!isAuthenticated || authError ? (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         ) : needsOnboarding ? (
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
