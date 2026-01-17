@@ -471,11 +471,23 @@ public class GroupService : IGroupService
 
         var memberships = await _groupRepository.GetMembersAsync(groupId);
 
+        if (memberships.Count == 0)
+        {
+            return new List<GroupMemberResponse>();
+        }
+
+        // Batch fetch all users to avoid N+1 query
+        var userIds = memberships.Select(m => m.UserId).ToList();
+        var users = await _userRepository.GetByIdsAsync(userIds);
+
+        // Create a lookup dictionary for fast access
+        var userDict = users.ToDictionary(u => u.Id);
+
+        // Map memberships to responses
         var responses = new List<GroupMemberResponse>();
         foreach (var m in memberships)
         {
-            var user = await _userRepository.GetByIdAsync(m.UserId);
-            if (user != null)
+            if (userDict.TryGetValue(m.UserId, out var user))
             {
                 responses.Add(new GroupMemberResponse
                 {
