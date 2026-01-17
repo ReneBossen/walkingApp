@@ -594,6 +594,7 @@ public class GroupService : IGroupService
             IsPublic = group.IsPublic,
             PeriodType = group.PeriodType,
             MemberCount = group.MemberCount,
+            // Security: Only owners and admins can see join codes to prevent unauthorized sharing
             JoinCode = (role == MemberRole.Owner || role == MemberRole.Admin) ? group.JoinCode : null,
             Role = role,
             CreatedAt = group.CreatedAt

@@ -75,6 +75,8 @@ public interface IGroupRepository
 
     /// <summary>
     /// Gets a group by join code.
+    /// Reserved for future use (e.g., POST /api/groups/join-by-code endpoint).
+    /// Currently, joining requires knowing the group ID and providing the join code for validation.
     /// </summary>
     /// <param name="joinCode">The join code.</param>
     /// <returns>The group, or null if not found.</returns>
@@ -98,6 +100,9 @@ public interface IGroupRepository
 
     /// <summary>
     /// Gets the count of members in a group.
+    /// Note: Member count is calculated on-demand via query to ensure real-time accuracy.
+    /// For MVP, this trade-off (extra query vs. consistency) is acceptable.
+    /// Future optimization: Consider database trigger to maintain cached count in groups table.
     /// </summary>
     /// <param name="groupId">The group ID.</param>
     /// <returns>The member count.</returns>
