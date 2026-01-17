@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Moq;
+using WalkingApp.Api.Common.Models;
 using WalkingApp.Api.Friends;
 using WalkingApp.Api.Friends.DTOs;
 using WalkingApp.Api.Steps;
@@ -567,9 +568,9 @@ public class FriendServiceTests
             .ReturnsAsync(friendship);
         _mockUserRepository.Setup(x => x.GetByIdAsync(friendId))
             .ReturnsAsync(friend);
-        _mockStepRepository.Setup(x => x.GetDailySummariesAsync(friendId, It.Is<Api.Steps.DTOs.DateRange>(r => r.StartDate == r.EndDate)))
+        _mockStepRepository.Setup(x => x.GetDailySummariesAsync(friendId, It.Is<Api.Common.Models.DateRange>(r => r.StartDate == r.EndDate)))
             .ReturnsAsync(todaySummaries);
-        _mockStepRepository.Setup(x => x.GetDailySummariesAsync(friendId, It.Is<Api.Steps.DTOs.DateRange>(r => r.StartDate != r.EndDate)))
+        _mockStepRepository.Setup(x => x.GetDailySummariesAsync(friendId, It.Is<Api.Common.Models.DateRange>(r => r.StartDate != r.EndDate)))
             .ReturnsAsync(weeklySummaries);
 
         // Act
@@ -866,7 +867,7 @@ public class FriendServiceTests
             .ReturnsAsync(friendship);
         _mockUserRepository.Setup(x => x.GetByIdAsync(friendId))
             .ReturnsAsync(friend);
-        _mockStepRepository.Setup(x => x.GetDailySummariesAsync(friendId, It.IsAny<Api.Steps.DTOs.DateRange>()))
+        _mockStepRepository.Setup(x => x.GetDailySummariesAsync(friendId, It.IsAny<Api.Common.Models.DateRange>()))
             .ReturnsAsync(new List<Api.Steps.DailyStepSummary>());
 
         // Act

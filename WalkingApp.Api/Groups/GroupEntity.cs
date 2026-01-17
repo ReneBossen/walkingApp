@@ -1,0 +1,84 @@
+using Supabase.Postgrest.Attributes;
+using Supabase.Postgrest.Models;
+
+namespace WalkingApp.Api.Groups;
+
+/// <summary>
+/// Entity model for Supabase groups table mapping.
+/// </summary>
+[Table("groups")]
+public class GroupEntity : BaseModel
+{
+    [PrimaryKey("id")]
+    public Guid Id { get; set; }
+
+    [Column("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [Column("description")]
+    public string? Description { get; set; }
+
+    [Column("created_by_id")]
+    public Guid CreatedById { get; set; }
+
+    [Column("is_public")]
+    public bool IsPublic { get; set; }
+
+    [Column("join_code")]
+    public string? JoinCode { get; set; }
+
+    [Column("period_type")]
+    public string PeriodType { get; set; } = string.Empty;
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Converts the entity to a domain Group model.
+    /// </summary>
+    public Group ToGroup(int memberCount = 0)
+    {
+        return new Group
+        {
+            Id = Id,
+            Name = Name,
+            Description = Description,
+            CreatedById = CreatedById,
+            IsPublic = IsPublic,
+            JoinCode = JoinCode,
+            PeriodType = ParsePeriodType(PeriodType),
+            CreatedAt = CreatedAt,
+            MemberCount = memberCount
+        };
+    }
+
+    /// <summary>
+    /// Creates an entity from a domain Group model.
+    /// </summary>
+    public static GroupEntity FromGroup(Group group)
+    {
+        return new GroupEntity
+        {
+            Id = group.Id,
+            Name = group.Name,
+            Description = group.Description,
+            CreatedById = group.CreatedById,
+            IsPublic = group.IsPublic,
+            JoinCode = group.JoinCode,
+            PeriodType = group.PeriodType.ToString().ToLowerInvariant(),
+            CreatedAt = group.CreatedAt
+        };
+    }
+
+    private static CompetitionPeriodType ParsePeriodType(string periodType)
+    {
+        return periodType.ToLowerInvariant() switch
+        {
+            "daily" => CompetitionPeriodType.Daily,
+            "weekly" => CompetitionPeriodType.Weekly,
+            "monthly" => CompetitionPeriodType.Monthly,
+            "custom" => CompetitionPeriodType.Custom,
+            _ => throw new ArgumentException($"Unknown period type: {periodType}")
+        };
+    }
+}
