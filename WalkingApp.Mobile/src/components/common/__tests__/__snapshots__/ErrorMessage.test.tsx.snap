@@ -1,0 +1,65 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`ErrorMessage snapshot should match snapshot with retry button 1`] = `
+<View
+  style={
+    {
+      "alignItems": "center",
+      "flex": 1,
+      "justifyContent": "center",
+      "padding": 24,
+    }
+  }
+>
+  <Text
+    style={
+      {
+        "marginBottom": 16,
+        "textAlign": "center",
+      }
+    }
+    testID="error-text"
+    variant="bodyLarge"
+  >
+    An error occurred
+  </Text>
+  <Button
+    mode="contained"
+    onPress={[MockFunction]}
+    style={
+      {
+        "marginTop": 8,
+      }
+    }
+    testID="retry-button"
+  >
+    Retry
+  </Button>
+</View>
+`;
+
+exports[`ErrorMessage snapshot should match snapshot without retry button 1`] = `
+<View
+  style={
+    {
+      "alignItems": "center",
+      "flex": 1,
+      "justifyContent": "center",
+      "padding": 24,
+    }
+  }
+>
+  <Text
+    style={
+      {
+        "marginBottom": 16,
+        "textAlign": "center",
+      }
+    }
+    testID="error-text"
+    variant="bodyLarge"
+  >
+    An error occurred
+  </Text>
+</View>
+`;
