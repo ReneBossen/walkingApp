@@ -481,7 +481,7 @@ public class GroupService : IGroupService
         var users = await _userRepository.GetByIdsAsync(userIds);
 
         // Create a lookup dictionary for fast access
-        var userDict = users.ToDictionary(u => u.Id);
+        var userDict = (users ?? new List<User>()).ToDictionary(u => u.Id);
 
         // Map memberships to responses
         var responses = new List<GroupMemberResponse>();

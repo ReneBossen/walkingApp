@@ -1161,8 +1161,8 @@ public class GroupServiceTests
             .ReturnsAsync(membership);
         _mockGroupRepository.Setup(x => x.GetMembersAsync(groupId))
             .ReturnsAsync(memberships);
-        _mockUserRepository.Setup(x => x.GetByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync((Guid id) => users.FirstOrDefault(u => u.Id == id));
+        _mockUserRepository.Setup(x => x.GetByIdsAsync(It.IsAny<List<Guid>>()))
+            .ReturnsAsync((List<Guid> ids) => users.Where(u => ids.Contains(u.Id)).ToList());
 
         // Act
         var result = await _sut.GetMembersAsync(userId, groupId);
