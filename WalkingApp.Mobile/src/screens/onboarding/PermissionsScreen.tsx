@@ -10,7 +10,12 @@ type PermissionsScreenProps = OnboardingStackScreenProps<'Permissions'>;
 
 export default function PermissionsScreen({ navigation }: PermissionsScreenProps) {
   const theme = useTheme();
-  const { notificationPermissionStatus, requestNotificationPermission } = usePermissions();
+  const {
+    notificationPermissionStatus,
+    activityPermissionStatus,
+    requestNotificationPermission,
+    requestActivityPermission
+  } = usePermissions();
 
   const handleContinue = () => {
     navigation.navigate('ProfileSetup');
@@ -37,11 +42,20 @@ export default function PermissionsScreen({ navigation }: PermissionsScreenProps
 
         <View style={styles.cardsContainer}>
           <PermissionCard
+            emoji="🏃"
+            title="Activity & Motion"
+            description="Track your daily steps and distance"
+            status={activityPermissionStatus}
+            onRequestPermission={requestActivityPermission}
+            testID="activity-permission-card"
+          />
+          <PermissionCard
             emoji="🔔"
             title="Notifications"
             description="Get updates on friend requests and achievements"
             status={notificationPermissionStatus}
             onRequestPermission={requestNotificationPermission}
+            testID="notification-permission-card"
           />
         </View>
 

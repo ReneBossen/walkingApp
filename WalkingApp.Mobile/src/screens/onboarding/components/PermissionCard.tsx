@@ -10,6 +10,7 @@ interface PermissionCardProps {
   description: string;
   status: PermissionStatus;
   onRequestPermission: () => void;
+  testID?: string;
 }
 
 export default function PermissionCard({
@@ -18,6 +19,7 @@ export default function PermissionCard({
   description,
   status,
   onRequestPermission,
+  testID,
 }: PermissionCardProps) {
   const theme = useTheme();
 
@@ -37,7 +39,7 @@ export default function PermissionCard({
   };
 
   return (
-    <Card style={styles.card} mode="elevated">
+    <Card style={styles.card} mode="elevated" testID={testID}>
       <Card.Content>
         <View style={styles.header}>
           <Text style={styles.emoji}>{emoji}</Text>
@@ -53,6 +55,7 @@ export default function PermissionCard({
           onPress={onRequestPermission}
           disabled={status === 'granted' || status === 'denied'}
           style={styles.button}
+          testID={testID ? `${testID}-button` : undefined}
         >
           {getButtonText()}
         </Button>
