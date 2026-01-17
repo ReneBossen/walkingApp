@@ -128,9 +128,12 @@ describe('Navigation Types', () => {
       expect(params).toBeUndefined();
     });
 
-    it('GroupsStackParamList_HasJoinGroupScreen_WithoutParams', () => {
-      const params: GroupsStackParamList['JoinGroup'] = undefined;
-      expect(params).toBeUndefined();
+    it('GroupsStackParamList_HasJoinGroupScreen_WithOptionalInviteCodeParam', () => {
+      const paramsWithInviteCode: GroupsStackParamList['JoinGroup'] = { inviteCode: 'abc123' };
+      expect(paramsWithInviteCode.inviteCode).toBe('abc123');
+
+      const paramsWithoutInviteCode: GroupsStackParamList['JoinGroup'] = {};
+      expect(paramsWithoutInviteCode.inviteCode).toBeUndefined();
     });
   });
 

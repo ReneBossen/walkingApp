@@ -54,7 +54,7 @@ export type GroupsStackParamList = {
   GroupDetail: { groupId: string };
   GroupManagement: { groupId: string };
   CreateGroup: undefined;
-  JoinGroup: undefined;
+  JoinGroup: { inviteCode?: string };
 };
 
 // Settings Stack

@@ -15,7 +15,14 @@ const linking = {
   prefixes: ['walkingapp://', 'https://walkingapp.com'],
   config: {
     screens: {
-      Auth: 'auth',
+      Auth: {
+        path: '',
+        screens: {
+          Login: 'login',
+          Register: 'register',
+          ForgotPassword: 'forgot-password',
+        },
+      },
       Main: {
         path: 'main',
         screens: {
