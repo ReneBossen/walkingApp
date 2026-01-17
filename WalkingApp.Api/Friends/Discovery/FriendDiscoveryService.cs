@@ -86,7 +86,7 @@ public class FriendDiscoveryService : IFriendDiscoveryService
         }
 
         // Generate deep link
-        var deepLink = $"walkingapp://invite/{user.QrCodeId}";
+        var deepLink = $"{DiscoveryConstants.InviteDeepLinkScheme}{user.QrCodeId}";
 
         // Generate QR code
         using var qrGenerator = new QRCodeGenerator();
@@ -181,7 +181,7 @@ public class FriendDiscoveryService : IFriendDiscoveryService
 
         await _inviteCodeRepository.CreateAsync(inviteCode);
 
-        var deepLink = $"walkingapp://invite/{code}";
+        var deepLink = $"{DiscoveryConstants.InviteDeepLinkScheme}{code}";
 
         return new GenerateInviteLinkResponse
         {
@@ -264,15 +264,5 @@ public class FriendDiscoveryService : IFriendDiscoveryService
             .Replace("+", "-")
             .Replace("/", "_")
             .TrimEnd('=');
-    }
-
-    /// <summary>
-    /// Internal class for deserializing the validate_invite_code function result.
-    /// </summary>
-    private class InviteCodeValidationResult
-    {
-        public bool Valid { get; set; }
-        public Guid UserId { get; set; }
-        public string? ErrorMessage { get; set; }
     }
 }
