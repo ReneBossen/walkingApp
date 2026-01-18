@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { stepsApi } from '@services/api/stepsApi';
+import { getErrorMessage } from '@utils/errorUtils';
 
 export interface StepEntry {
   id: string;
@@ -45,8 +46,8 @@ export const useStepsStore = create<StepsState>((set) => ({
       await stepsApi.addSteps(steps, distanceMeters);
       const today = await stepsApi.getTodaySteps();
       set({ todaySteps: today.steps, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -56,8 +57,8 @@ export const useStepsStore = create<StepsState>((set) => ({
     try {
       const today = await stepsApi.getTodaySteps();
       set({ todaySteps: today.steps, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 
@@ -66,8 +67,8 @@ export const useStepsStore = create<StepsState>((set) => ({
     try {
       const stats = await stepsApi.getStats();
       set({ stats, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 
@@ -76,8 +77,8 @@ export const useStepsStore = create<StepsState>((set) => ({
     try {
       const history = await stepsApi.getHistory(period);
       set({ history, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 }));

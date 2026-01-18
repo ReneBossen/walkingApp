@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuthStore } from '@store/authStore';
+import { getErrorMessage } from '@utils/errorUtils';
 
 export const useLogin = () => {
   const [email, setEmail] = useState('');
@@ -46,8 +47,8 @@ export const useLogin = () => {
 
     try {
       await signIn(email.trim().toLowerCase(), password);
-    } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Invalid email or password'));
     }
   };
 

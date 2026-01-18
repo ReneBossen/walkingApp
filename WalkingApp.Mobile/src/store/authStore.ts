@@ -6,6 +6,7 @@ import {
   signOut as supabaseSignOut,
   resetPassword,
 } from '@services/supabase';
+import { getErrorMessage } from '@utils/errorUtils';
 
 interface AuthState {
   session: Session | null;
@@ -40,9 +41,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message,
+        error: getErrorMessage(error),
         isLoading: false,
       });
       throw error;
@@ -59,9 +60,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: !!session,
         isLoading: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message,
+        error: getErrorMessage(error),
         isLoading: false,
       });
       throw error;
@@ -78,9 +79,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: false,
         isLoading: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message,
+        error: getErrorMessage(error),
         isLoading: false,
       });
     }
@@ -91,9 +92,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       await resetPassword(email);
       set({ isLoading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({
-        error: error.message,
+        error: getErrorMessage(error),
         isLoading: false,
       });
       throw error;

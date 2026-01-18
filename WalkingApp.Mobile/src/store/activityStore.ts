@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { activityApi, ActivityItem } from '@services/api/activityApi';
+import { getErrorMessage } from '@utils/errorUtils';
 
 interface ActivityState {
   feed: ActivityItem[];
@@ -22,8 +23,8 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
     try {
       const feed = await activityApi.getFeed(limit);
       set({ feed, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 

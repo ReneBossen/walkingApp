@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { usersApi } from '@services/api/usersApi';
+import { getErrorMessage } from '@utils/errorUtils';
 
 export interface UserProfile {
   id: string;
@@ -59,8 +60,8 @@ export const useUserStore = create<UserState>((set, get) => ({
     try {
       const user = await usersApi.getCurrentUser();
       set({ currentUser: user, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 
@@ -70,8 +71,8 @@ export const useUserStore = create<UserState>((set, get) => ({
       const updated = await usersApi.updateProfile(updates);
       set({ currentUser: updated, isLoading: false });
       return updated;
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -87,8 +88,8 @@ export const useUserStore = create<UserState>((set, get) => ({
         currentUser: { ...current, preferences: updated },
         isLoading: false,
       });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -107,8 +108,8 @@ export const useUserStore = create<UserState>((set, get) => ({
         set({ isLoading: false });
       }
       return avatarUrl;
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
