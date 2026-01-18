@@ -55,7 +55,12 @@ jest.mock('react-native-paper', () => {
     });
   };
 
-  MockTextInput.Icon = () => null;
+  MockTextInput.Icon = ({ icon, onPress }: any) => {
+    if (onPress) {
+      return React.createElement(RN.TouchableOpacity, { onPress, testID: `icon-${icon}` }, null);
+    }
+    return null;
+  };
 
   return {
     TextInput: MockTextInput,
