@@ -3,9 +3,13 @@ import { UserProfile, UserPreferences } from '@store/userStore';
 
 export const usersApi = {
   getCurrentUser: async (): Promise<UserProfile> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
     const { data, error } = await supabase
       .from('users')
       .select('*')
+      .eq('id', user.id)
       .single();
 
     if (error) throw error;
@@ -13,9 +17,13 @@ export const usersApi = {
   },
 
   updateProfile: async (updates: Partial<UserProfile>): Promise<UserProfile> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
     const { data, error } = await supabase
       .from('users')
       .update(updates)
+      .eq('id', user.id)
       .select()
       .single();
 
@@ -24,9 +32,13 @@ export const usersApi = {
   },
 
   updatePreferences: async (prefs: Partial<UserPreferences>): Promise<UserPreferences> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
     const { data: current } = await supabase
       .from('users')
       .select('preferences')
+      .eq('id', user.id)
       .single();
 
     const merged = { ...current?.preferences, ...prefs };
@@ -34,6 +46,7 @@ export const usersApi = {
     const { data, error } = await supabase
       .from('users')
       .update({ preferences: merged })
+      .eq('id', user.id)
       .select('preferences')
       .single();
 
