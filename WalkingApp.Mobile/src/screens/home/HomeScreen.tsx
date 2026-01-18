@@ -171,7 +171,7 @@ export default function HomeScreen() {
               </Text>
             </View>
           ) : (
-            activityFeed.map((item) => (
+            activityFeed.map((item: ActivityItem) => (
               <ActivityFeedItem
                 key={item.id}
                 item={item}

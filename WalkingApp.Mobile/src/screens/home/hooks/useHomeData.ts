@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useStepsStore } from '@store/stepsStore';
 import { useUserStore } from '@store/userStore';
-import { useActivityStore } from '@store/activityStore';
+import { useActivityStore, ActivityItem } from '@store/activityStore';
 import { useNotificationsStore } from '@store/notificationsStore';
 import { activityApi } from '@services/api/activityApi';
 import { supabase } from '@services/supabase';
@@ -20,7 +20,7 @@ interface UseHomeDataReturn {
   units: 'metric' | 'imperial';
 
   // Activity feed
-  activityFeed: ReturnType<typeof useActivityStore>['feed'];
+  activityFeed: ActivityItem[];
 
   // Notifications
   unreadCount: number;

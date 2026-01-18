@@ -17,7 +17,8 @@
       "Bash(where gh:*)",
       "Bash(git pull:*)",
       "Bash(npm install:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
