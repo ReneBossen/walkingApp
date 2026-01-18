@@ -10,7 +10,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
   },
 });
 
@@ -101,6 +101,24 @@ export const signInWithIdToken = async (idToken: string, accessToken?: string) =
     provider: 'google',
     token: idToken,
     access_token: accessToken,
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+/**
+ * Sign in with Google OAuth (browser-based)
+ * Opens browser for authentication, then Supabase automatically detects
+ * and validates the session from the redirect URL via detectSessionInUrl
+ */
+export const signInWithGoogleOAuth = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: 'walkingapp://',
+      skipBrowserRedirect: false,
+    },
   });
 
   if (error) throw error;

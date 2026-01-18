@@ -1,20 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { TextInput, Button, Text, Divider } from 'react-native-paper';
 import { AuthStackScreenProps } from '@navigation/types';
 import { useAppTheme } from '@hooks/useAppTheme';
-import { useGoogleAuth } from '@hooks/useGoogleAuth';
-import { useAuthStore } from '@store/authStore';
+import { signInWithGoogleOAuth } from '@services/supabase';
+import * as WebBrowser from 'expo-web-browser';
 import AuthLayout from './components/AuthLayout';
 import AuthErrorMessage from './components/AuthErrorMessage';
 import { useLogin } from './hooks/useLogin';
+
+WebBrowser.maybeCompleteAuthSession();
 
 type Props = AuthStackScreenProps<'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { paperTheme } = useAppTheme();
-  const signInWithGoogleStore = useAuthStore((state) => state.signInWithGoogle);
-  const { signInWithGoogle, isLoading: isGoogleLoading, error: googleError } = useGoogleAuth();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const {
     email,
     setEmail,
@@ -28,13 +30,27 @@ export default function LoginScreen({ navigation }: Props) {
   } = useLogin();
 
   const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setGoogleError(null);
+
     try {
-      const tokens = await signInWithGoogle();
-      if (tokens?.idToken) {
-        await signInWithGoogleStore(tokens.idToken, tokens.accessToken);
+      const { url } = await signInWithGoogleOAuth();
+
+      if (url) {
+        const result = await WebBrowser.openAuthSessionAsync(
+          url,
+          'walkingapp://'
+        );
+
+        if (result.type === 'cancel') {
+          setGoogleError('Sign in was cancelled');
+        }
       }
     } catch (err: any) {
       console.error('Google sign-in error:', err.message || 'Unknown error');
+      setGoogleError(err.message || 'Failed to sign in with Google');
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -51,7 +67,7 @@ export default function LoginScreen({ navigation }: Props) {
           autoCorrect={false}
           mode="outlined"
           style={styles.input}
-          disabled={isLoading}
+          disabled={isLoading || isGoogleLoading}
           left={<TextInput.Icon icon="email" />}
         />
 
@@ -64,7 +80,7 @@ export default function LoginScreen({ navigation }: Props) {
           autoComplete="password"
           mode="outlined"
           style={styles.input}
-          disabled={isLoading}
+          disabled={isLoading || isGoogleLoading}
           left={<TextInput.Icon icon="lock" />}
           right={
             <TextInput.Icon
@@ -76,7 +92,7 @@ export default function LoginScreen({ navigation }: Props) {
 
         <TouchableOpacity
           onPress={() => navigation.navigate('ForgotPassword')}
-          disabled={isLoading}
+          disabled={isLoading || isGoogleLoading}
           style={styles.forgotPassword}
         >
           <Text
@@ -124,7 +140,7 @@ export default function LoginScreen({ navigation }: Props) {
           <Text variant="bodyMedium">Don't have an account? </Text>
           <TouchableOpacity
             onPress={() => navigation.navigate('Register')}
-            disabled={isLoading}
+            disabled={isLoading || isGoogleLoading}
           >
             <Text
               variant="bodyMedium"
