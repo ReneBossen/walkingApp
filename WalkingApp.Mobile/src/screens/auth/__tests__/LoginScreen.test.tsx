@@ -2,12 +2,10 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import LoginScreen from '../LoginScreen';
 import { useLogin } from '../hooks/useLogin';
-import { useGoogleAuth } from '@hooks/useGoogleAuth';
 import { useAuthStore } from '@store/authStore';
 
 // Mock dependencies
 jest.mock('../hooks/useLogin');
-jest.mock('@hooks/useGoogleAuth');
 jest.mock('@store/authStore');
 
 jest.mock('@hooks/useAppTheme', () => ({
@@ -89,23 +87,13 @@ const mockNavigation = {
 };
 
 // Get references to mocked functions
-const mockUseGoogleAuth = useGoogleAuth as jest.MockedFunction<typeof useGoogleAuth>;
 const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;
 
 describe('LoginScreen', () => {
   const mockUseLogin = useLogin as jest.MockedFunction<typeof useLogin>;
-  const mockSignInWithGoogle = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Default mock for useGoogleAuth
-    mockUseGoogleAuth.mockReturnValue({
-      signInWithGoogle: mockSignInWithGoogle,
-      isLoading: false,
-      error: null,
-      request: null,
-    });
 
     // Default mock for useAuthStore
     mockUseAuthStore.mockImplementation((selector: any) => {
@@ -545,177 +533,4 @@ describe('LoginScreen', () => {
     });
   });
 
-  describe('LoginScreen_GoogleSignIn_UsesHookBasedApproach', () => {
-    beforeEach(() => {
-      mockUseLogin.mockReturnValue({
-        email: '',
-        setEmail: jest.fn(),
-        password: '',
-        setPassword: jest.fn(),
-        showPassword: false,
-        togglePasswordVisibility: jest.fn(),
-        isLoading: false,
-        error: null,
-        handleLogin: jest.fn(),
-      });
-    });
-
-    it('LoginScreen_WhenGoogleButtonPressed_CallsUseGoogleAuthHook', async () => {
-      mockSignInWithGoogle.mockResolvedValue({
-        idToken: 'mock-id-token',
-        accessToken: 'mock-access-token',
-      });
-
-      const { getByText } = render(<LoginScreen navigation={mockNavigation as any} route={{} as any} />);
-
-      fireEvent.press(getByText('Continue with Google'));
-
-      await waitFor(() => {
-        expect(mockSignInWithGoogle).toHaveBeenCalled();
-      });
-    });
-
-    it('LoginScreen_WhenTokensReceived_CallsAuthStoreSignInWithGoogle', async () => {
-      const mockStoreSignIn = jest.fn();
-      mockUseAuthStore.mockImplementation((selector: any) => {
-        const store = { signInWithGoogle: mockStoreSignIn };
-        return selector ? selector(store) : store;
-      });
-
-      mockSignInWithGoogle.mockResolvedValue({
-        idToken: 'mock-id-token',
-        accessToken: 'mock-access-token',
-      });
-
-      const { getByText } = render(<LoginScreen navigation={mockNavigation as any} route={{} as any} />);
-
-      fireEvent.press(getByText('Continue with Google'));
-
-      await waitFor(() => {
-        expect(mockStoreSignIn).toHaveBeenCalledWith('mock-id-token', 'mock-access-token');
-      });
-    });
-
-    it('LoginScreen_WhenOnlyIdTokenReceived_CallsAuthStoreWithIdToken', async () => {
-      const mockStoreSignIn = jest.fn();
-      mockUseAuthStore.mockImplementation((selector: any) => {
-        const store = { signInWithGoogle: mockStoreSignIn };
-        return selector ? selector(store) : store;
-      });
-
-      mockSignInWithGoogle.mockResolvedValue({
-        idToken: 'mock-id-token',
-        accessToken: undefined,
-      });
-
-      const { getByText } = render(<LoginScreen navigation={mockNavigation as any} route={{} as any} />);
-
-      fireEvent.press(getByText('Continue with Google'));
-
-      await waitFor(() => {
-        expect(mockStoreSignIn).toHaveBeenCalledWith('mock-id-token', undefined);
-      });
-    });
-
-    it('LoginScreen_WhenNoIdToken_DoesNotCallAuthStore', async () => {
-      const mockStoreSignIn = jest.fn();
-      mockUseAuthStore.mockImplementation((selector: any) => {
-        const store = { signInWithGoogle: mockStoreSignIn };
-        return selector ? selector(store) : store;
-      });
-
-      mockSignInWithGoogle.mockResolvedValue({
-        idToken: undefined,
-        accessToken: 'mock-access-token',
-      });
-
-      const { getByText } = render(<LoginScreen navigation={mockNavigation as any} route={{} as any} />);
-
-      fireEvent.press(getByText('Continue with Google'));
-
-      await waitFor(() => {
-        expect(mockStoreSignIn).not.toHaveBeenCalled();
-      });
-    });
-
-    it('LoginScreen_WhenNoTokensReturned_DoesNotCallAuthStore', async () => {
-      const mockStoreSignIn = jest.fn();
-      mockUseAuthStore.mockImplementation((selector: any) => {
-        const store = { signInWithGoogle: mockStoreSignIn };
-        return selector ? selector(store) : store;
-      });
-
-      mockSignInWithGoogle.mockResolvedValue(null);
-
-      const { getByText } = render(<LoginScreen navigation={mockNavigation as any} route={{} as any} />);
-
-      fireEvent.press(getByText('Continue with Google'));
-
-      await waitFor(() => {
-        expect(mockStoreSignIn).not.toHaveBeenCalled();
-      });
-    });
-
-    it('LoginScreen_WhenGoogleLoading_DisablesGoogleButton', () => {
-      mockUseGoogleAuth.mockReturnValue({
-        signInWithGoogle: mockSignInWithGoogle,
-        isLoading: true,
-        error: null,
-        request: null,
-      });
-
-      const { getByText } = render(<LoginScreen navigation={mockNavigation as any} route={{} as any} />);
-
-      const googleButton = getByText('Continue with Google').parent;
-      expect(googleButton?.props.disabled).toBe(true);
-    });
-
-    it('LoginScreen_WhenEmailLoading_DisablesGoogleButton', () => {
-      mockUseLogin.mockReturnValue({
-        email: '',
-        setEmail: jest.fn(),
-        password: '',
-        setPassword: jest.fn(),
-        showPassword: false,
-        togglePasswordVisibility: jest.fn(),
-        isLoading: true,
-        error: null,
-        handleLogin: jest.fn(),
-      });
-
-      const { getByText } = render(<LoginScreen navigation={mockNavigation as any} route={{} as any} />);
-
-      const googleButton = getByText('Continue with Google').parent;
-      expect(googleButton?.props.disabled).toBe(true);
-    });
-
-    it('LoginScreen_WhenGoogleError_DisplaysErrorMessage', () => {
-      mockUseGoogleAuth.mockReturnValue({
-        signInWithGoogle: mockSignInWithGoogle,
-        isLoading: false,
-        error: 'Google authentication failed',
-        request: null,
-      });
-
-      const { getByTestId } = render(<LoginScreen navigation={mockNavigation as any} route={{} as any} />);
-
-      expect(getByTestId('error-message')).toHaveTextContent('Google authentication failed');
-    });
-
-    it('LoginScreen_WhenGoogleSignInFails_LogsError', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      const mockError = new Error('OAuth failed');
-      mockSignInWithGoogle.mockRejectedValue(mockError);
-
-      const { getByText } = render(<LoginScreen navigation={mockNavigation as any} route={{} as any} />);
-
-      fireEvent.press(getByText('Continue with Google'));
-
-      await waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith('Google sign-in error:', mockError);
-      });
-
-      consoleErrorSpy.mockRestore();
-    });
-  });
 });
