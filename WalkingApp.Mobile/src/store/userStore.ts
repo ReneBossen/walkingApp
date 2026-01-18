@@ -11,6 +11,7 @@ export interface UserProfile {
   avatar_url?: string;
   preferences: UserPreferences;
   created_at: string;
+  onboarding_completed: boolean;
 }
 
 export interface UserPreferences {
@@ -67,6 +68,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     try {
       const updated = await usersApi.updateProfile(updates);
       set({ currentUser: updated, isLoading: false });
+      return updated;
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
       throw error;
