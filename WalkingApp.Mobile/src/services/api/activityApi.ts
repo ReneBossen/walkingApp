@@ -60,8 +60,10 @@ export const activityApi = {
 
   /**
    * Subscribes to real-time activity feed updates
+   * @param callback - Called when a new activity item is received
+   * @param onError - Optional callback for error handling (errors are also logged to console)
    */
-  subscribeToFeed: (callback: (item: ActivityItem) => void) => {
+  subscribeToFeed: (callback: (item: ActivityItem) => void, onError?: (error: Error) => void) => {
     const subscription = supabase
       .channel('activity_feed_changes')
       .on(
@@ -72,30 +74,45 @@ export const activityApi = {
           table: 'activity_feed',
         },
         async (payload) => {
-          // Fetch the full item without user join
-          // The user_id references auth.users which cannot be joined from public schema
-          const { data } = await supabase
-            .from('activity_feed')
-            .select(`
-              id,
-              type,
-              user_id,
-              message,
-              created_at
-            `)
-            .eq('id', payload.new.id)
-            .single();
+          try {
+            // Fetch the full item without user join
+            // The user_id references auth.users which cannot be joined from public schema
+            const { data, error } = await supabase
+              .from('activity_feed')
+              .select(`
+                id,
+                type,
+                user_id,
+                message,
+                created_at
+              `)
+              .eq('id', payload.new.id)
+              .single();
 
-          if (data) {
-            callback({
-              id: data.id,
-              type: data.type as ActivityItem['type'],
-              userId: data.user_id,
-              userName: undefined,
-              avatarUrl: undefined,
-              message: data.message,
-              timestamp: data.created_at,
-            });
+            if (error) {
+              const fetchError = new Error(`Failed to fetch activity item: ${error.message}`);
+              console.error('[activityApi] Real-time subscription error:', fetchError.message);
+              onError?.(fetchError);
+              return;
+            }
+
+            if (data) {
+              callback({
+                id: data.id,
+                type: data.type as ActivityItem['type'],
+                userId: data.user_id,
+                userName: undefined,
+                avatarUrl: undefined,
+                message: data.message,
+                timestamp: data.created_at,
+              });
+            }
+          } catch (error) {
+            const wrappedError = error instanceof Error
+              ? error
+              : new Error('Unknown error in activity feed subscription');
+            console.error('[activityApi] Real-time subscription error:', wrappedError.message);
+            onError?.(wrappedError);
           }
         }
       )
