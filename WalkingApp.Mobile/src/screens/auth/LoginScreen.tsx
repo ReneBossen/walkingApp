@@ -34,7 +34,7 @@ export default function LoginScreen({ navigation }: Props) {
         await signInWithGoogleStore(tokens.idToken, tokens.accessToken);
       }
     } catch (err: any) {
-      console.error('Google sign-in error:', err);
+      console.error('Google sign-in error:', err.message || 'Unknown error');
     }
   };
 
