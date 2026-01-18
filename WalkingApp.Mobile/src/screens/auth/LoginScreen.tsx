@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { TextInput, Button, Text, Divider } from 'react-native-paper';
 import { AuthStackScreenProps } from '@navigation/types';
 import { useAppTheme } from '@hooks/useAppTheme';
-import { signInWithGoogleOAuth } from '@services/supabase';
+import { signInWithGoogleOAuth, supabase } from '@services/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import AuthLayout from './components/AuthLayout';
 import AuthErrorMessage from './components/AuthErrorMessage';
@@ -37,12 +37,46 @@ export default function LoginScreen({ navigation }: Props) {
       const { url } = await signInWithGoogleOAuth();
 
       if (url) {
+        // Open browser for OAuth
         const result = await WebBrowser.openAuthSessionAsync(
           url,
           'walkingapp://'
         );
 
-        if (result.type === 'cancel') {
+        if (result.type === 'success' && result.url) {
+          // Extract tokens from redirect URL
+          const redirectUrl = result.url;
+
+          // Supabase redirects with tokens in URL fragment (after #)
+          // Format: walkingapp://#access_token=...&refresh_token=...
+          const hashIndex = redirectUrl.indexOf('#');
+
+          if (hashIndex !== -1) {
+            const fragment = redirectUrl.substring(hashIndex + 1);
+            const params = new URLSearchParams(fragment);
+
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+              // Create session - Supabase validates tokens before creating session
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+
+              if (sessionError) {
+                throw sessionError;
+              }
+
+              // Session created successfully - auth state listener will handle navigation
+            } else {
+              setGoogleError('Failed to extract authentication tokens');
+            }
+          } else {
+            setGoogleError('Invalid redirect URL format');
+          }
+        } else if (result.type === 'cancel') {
           setGoogleError('Sign in was cancelled');
         }
       }
