@@ -34,6 +34,7 @@ export default function HomeScreen() {
     displayName,
     units,
     activityFeed,
+    activityError,
     unreadCount,
     isLoading,
     isRefreshing,
@@ -155,7 +156,22 @@ export default function HomeScreen() {
           </Text>
           <Divider style={styles.divider} />
 
-          {activityFeed.length === 0 ? (
+          {activityError ? (
+            <View style={styles.emptyState}>
+              <Text
+                variant="bodyMedium"
+                style={{ color: theme.colors.onSurfaceVariant }}
+              >
+                Unable to load activity feed
+              </Text>
+              <Text
+                variant="bodySmall"
+                style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}
+              >
+                Pull to refresh and try again
+              </Text>
+            </View>
+          ) : activityFeed.length === 0 ? (
             <View style={styles.emptyState}>
               <Text
                 variant="bodyMedium"
