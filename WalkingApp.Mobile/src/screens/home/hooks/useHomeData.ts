@@ -21,6 +21,7 @@ interface UseHomeDataReturn {
 
   // Activity feed
   activityFeed: ActivityItem[];
+  activityError: string | null;
 
   // Notifications
   unreadCount: number;
@@ -128,8 +129,10 @@ export const useHomeData = (): UseHomeDataReturn => {
   }, [addActivityItem]);
 
   // Derived values
-  const isLoading = stepsLoading || activityLoading;
-  const error = stepsError || activityError;
+  // Only steps loading is critical for the main dashboard display
+  const isLoading = stepsLoading;
+  // Only steps error should block the main dashboard - activity errors are non-critical
+  const error = stepsError;
 
   // User preferences with defaults
   const dailyGoal = currentUser?.preferences?.daily_step_goal ?? 10000;
@@ -156,6 +159,7 @@ export const useHomeData = (): UseHomeDataReturn => {
     displayName,
     units,
     activityFeed,
+    activityError,
     unreadCount,
     isLoading,
     isRefreshing,
