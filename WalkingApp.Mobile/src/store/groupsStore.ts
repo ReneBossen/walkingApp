@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { groupsApi } from '@services/api/groupsApi';
+import { getErrorMessage } from '@utils/errorUtils';
 
 export interface Group {
   id: string;
@@ -55,8 +56,8 @@ export const useGroupsStore = create<GroupsState>((set) => ({
     try {
       const groups = await groupsApi.getGroups();
       set({ groups, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 
@@ -65,8 +66,8 @@ export const useGroupsStore = create<GroupsState>((set) => ({
     try {
       const group = await groupsApi.getGroup(groupId);
       set({ currentGroup: group, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 
@@ -75,8 +76,8 @@ export const useGroupsStore = create<GroupsState>((set) => ({
     try {
       const leaderboard = await groupsApi.getLeaderboard(groupId);
       set({ leaderboard, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 
@@ -86,8 +87,8 @@ export const useGroupsStore = create<GroupsState>((set) => ({
       const group = await groupsApi.createGroup(data);
       set({ isLoading: false });
       return group;
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -97,8 +98,8 @@ export const useGroupsStore = create<GroupsState>((set) => ({
     try {
       await groupsApi.joinGroup(groupId);
       set({ isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -108,8 +109,8 @@ export const useGroupsStore = create<GroupsState>((set) => ({
     try {
       await groupsApi.leaveGroup(groupId);
       set({ isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuthStore } from '@store/authStore';
+import { getErrorMessage } from '@utils/errorUtils';
 
 export const useRegister = () => {
   const [displayName, setDisplayName] = useState('');
@@ -92,8 +93,8 @@ export const useRegister = () => {
     try {
       await signUp(email.trim().toLowerCase(), password, displayName.trim());
       setRegistrationSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Registration failed. Please try again.'));
     }
   };
 

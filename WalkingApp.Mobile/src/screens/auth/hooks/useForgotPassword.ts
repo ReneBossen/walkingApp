@@ -31,8 +31,9 @@ export const useForgotPassword = () => {
     try {
       await resetPassword(email.trim().toLowerCase());
       setEmailSent(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // For security, show generic message even if email doesn't exist
+      // We intentionally don't expose the actual error message
       setError('If an account exists with this email, you will receive a password reset link.');
     } finally {
       setIsLoading(false);

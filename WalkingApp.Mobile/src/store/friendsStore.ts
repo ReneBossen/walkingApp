@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { friendsApi } from '@services/api/friendsApi';
+import { getErrorMessage } from '@utils/errorUtils';
 
 export interface Friend {
   id: string;
@@ -37,8 +38,8 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
     try {
       const friends = await friendsApi.getFriends();
       set({ friends, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 
@@ -47,8 +48,8 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
     try {
       const requests = await friendsApi.getRequests();
       set({ requests, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 
@@ -57,8 +58,8 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
     try {
       await friendsApi.sendRequest(userId);
       set({ isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -70,8 +71,8 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
       const requests = get().requests.filter(r => r.user_id !== userId);
       set({ requests, isLoading: false });
       await get().fetchFriends();
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -82,8 +83,8 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
       await friendsApi.declineRequest(userId);
       const requests = get().requests.filter(r => r.user_id !== userId);
       set({ requests, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -94,8 +95,8 @@ export const useFriendsStore = create<FriendsState>((set, get) => ({
       await friendsApi.removeFriend(userId);
       const friends = get().friends.filter(f => f.user_id !== userId);
       set({ friends, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },

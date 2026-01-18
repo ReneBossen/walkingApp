@@ -4,6 +4,7 @@ import { TextInput, Button, Text, Divider } from 'react-native-paper';
 import { AuthStackScreenProps } from '@navigation/types';
 import { useAppTheme } from '@hooks/useAppTheme';
 import { signInWithGoogleOAuth, supabase } from '@services/supabase';
+import { getErrorMessage } from '@utils/errorUtils';
 import * as WebBrowser from 'expo-web-browser';
 import AuthLayout from './components/AuthLayout';
 import AuthErrorMessage from './components/AuthErrorMessage';
@@ -97,9 +98,10 @@ export default function LoginScreen({ navigation }: Props) {
           setGoogleError('Sign in was cancelled');
         }
       }
-    } catch (err: any) {
-      console.error('Google sign-in error:', err.message || 'Unknown error');
-      setGoogleError(err.message || 'Failed to sign in with Google');
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err, 'Failed to sign in with Google');
+      console.error('Google sign-in error:', errorMessage);
+      setGoogleError(errorMessage);
     } finally {
       setIsGoogleLoading(false);
     }

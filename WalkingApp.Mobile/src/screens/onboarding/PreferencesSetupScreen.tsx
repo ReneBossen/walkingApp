@@ -4,6 +4,7 @@ import { Text, Button, SegmentedButtons, TextInput, Menu } from 'react-native-pa
 import { OnboardingStackScreenProps } from '@navigation/types';
 import { useAppTheme } from '@hooks/useAppTheme';
 import { useUserStore, UserPreferences } from '@store/userStore';
+import { getErrorMessage } from '@utils/errorUtils';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
 
@@ -57,9 +58,9 @@ export default function PreferencesSetupScreen({ navigation }: Props) {
 
       // Navigation will automatically happen when onboarding_completed changes in RootNavigator
       // The RootNavigator is watching currentUser.onboarding_completed
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error completing onboarding:', error);
-      setError(error.message || 'Failed to save preferences. Please try again.');
+      setError(getErrorMessage(error, 'Failed to save preferences. Please try again.'));
       setIsLoading(false);
     }
   };

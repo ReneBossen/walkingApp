@@ -4,6 +4,7 @@ import { Text, Button, TextInput, Avatar } from 'react-native-paper';
 import { OnboardingStackScreenProps } from '@navigation/types';
 import { useAppTheme } from '@hooks/useAppTheme';
 import { useUserStore } from '@store/userStore';
+import { getErrorMessage } from '@utils/errorUtils';
 import OnboardingLayout from './components/OnboardingLayout';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -127,9 +128,9 @@ export default function ProfileSetupScreen({ navigation }: Props) {
 
       // Navigate to preferences setup
       navigation.navigate('PreferencesSetup');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating profile:', error);
-      setError(error.message || 'Failed to update profile. Please try again.');
+      setError(getErrorMessage(error, 'Failed to update profile. Please try again.'));
     } finally {
       setIsLoading(false);
     }

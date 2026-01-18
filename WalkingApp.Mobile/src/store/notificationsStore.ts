@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { notificationsApi } from '@services/api/notificationsApi';
+import { getErrorMessage } from '@utils/errorUtils';
 
 export interface Notification {
   id: string;
@@ -37,8 +38,8 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
     try {
       const notifications = await notificationsApi.getNotifications();
       set({ notifications, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
     }
   },
 
@@ -46,8 +47,8 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
     try {
       const unreadCount = await notificationsApi.getUnreadCount();
       set({ unreadCount });
-    } catch (error: any) {
-      set({ error: error.message });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error) });
     }
   },
 
@@ -60,8 +61,8 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
       );
       set({ notifications, isLoading: false });
       await get().fetchUnreadCount();
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -72,8 +73,8 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
       await notificationsApi.markAllAsRead();
       const notifications = get().notifications.map(n => ({ ...n, is_read: true }));
       set({ notifications, unreadCount: 0, isLoading: false });
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
@@ -85,8 +86,8 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
       const notifications = get().notifications.filter(n => n.id !== notificationId);
       set({ notifications, isLoading: false });
       await get().fetchUnreadCount();
-    } catch (error: any) {
-      set({ error: error.message, isLoading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoading: false });
       throw error;
     }
   },
