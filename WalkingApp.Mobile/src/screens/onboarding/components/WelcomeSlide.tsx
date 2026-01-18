@@ -12,9 +12,12 @@ export default function WelcomeSlide({ emoji, title, description }: WelcomeSlide
   const theme = useTheme();
   const { width } = useWindowDimensions();
 
+  // Calculate responsive maxWidth (90% of screen width, max 500px)
+  const contentMaxWidth = Math.min(width * 0.9, 500);
+
   return (
     <View style={[styles.container, { width }]}>
-      <View style={styles.content}>
+      <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
         <Text style={styles.emoji}>{emoji}</Text>
         <Text variant="headlineLarge" style={[styles.title, { color: theme.colors.onBackground }]}>
           {title}
@@ -35,15 +38,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 40,
   },
   content: {
     alignItems: 'center',
-    paddingHorizontal: 32,
-    maxWidth: 400,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
   },
   emoji: {
-    fontSize: 80,
-    marginBottom: 32,
+    fontSize: 120,
+    marginBottom: 24,
   },
   title: {
     fontWeight: '700',
@@ -52,6 +56,6 @@ const styles = StyleSheet.create({
   },
   description: {
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 28,
   },
 });
