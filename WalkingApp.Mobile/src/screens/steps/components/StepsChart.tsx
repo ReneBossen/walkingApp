@@ -81,11 +81,12 @@ export function StepsChart({
   const stepValue = yAxisMaxValue / noOfSections;
 
   // Format Y-axis labels (e.g., 10000 -> "10k")
-  const formatYAxisLabel = (value: number): string => {
+  const formatYAxisLabel = (label: string): string => {
+    const value = parseFloat(label);
     if (value >= 1000) {
       return `${(value / 1000).toFixed(0)}k`;
     }
-    return value.toString();
+    return label;
   };
 
   if (entries.length === 0) {
