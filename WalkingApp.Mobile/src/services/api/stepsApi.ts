@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { StepEntry, StepStats } from '@store/stepsStore';
+import { StepEntry, StepStats, DailyStepEntry } from '@store/stepsStore';
 
 export const stepsApi = {
   addSteps: async (steps: number, distanceMeters: number): Promise<StepEntry> => {
@@ -9,7 +9,7 @@ export const stepsApi = {
       .from('step_entries')
       .upsert({
         date: today,
-        steps,
+        step_count: steps,
         distance_meters: distanceMeters,
       })
       .select()
@@ -33,7 +33,7 @@ export const stepsApi = {
       throw error;
     }
 
-    return data || { id: '', user_id: '', date: today, steps: 0, distance_meters: 0, created_at: '' };
+    return data || { id: '', user_id: '', date: today, step_count: 0, distance_meters: 0, created_at: '' };
   },
 
   getStats: async (): Promise<StepStats> => {
@@ -43,27 +43,27 @@ export const stepsApi = {
 
     const { data: todayData } = await supabase
       .from('step_entries')
-      .select('steps')
+      .select('step_count')
       .eq('date', today)
       .single();
 
     const { data: weekData } = await supabase
       .from('step_entries')
-      .select('steps')
+      .select('step_count')
       .gte('date', weekAgo);
 
     const { data: monthData } = await supabase
       .from('step_entries')
-      .select('steps')
+      .select('step_count')
       .gte('date', monthAgo);
 
-    const weekTotal = weekData?.reduce((sum, entry) => sum + entry.steps, 0) || 0;
-    const monthTotal = monthData?.reduce((sum, entry) => sum + entry.steps, 0) || 0;
+    const weekTotal = weekData?.reduce((sum, entry) => sum + entry.step_count, 0) || 0;
+    const monthTotal = monthData?.reduce((sum, entry) => sum + entry.step_count, 0) || 0;
 
     // Calculate streak using UTC dates to avoid timezone sensitivity issues
     const { data: allData } = await supabase
       .from('step_entries')
-      .select('date, steps')
+      .select('date, step_count')
       .order('date', { ascending: false });
 
     let streak = 0;
@@ -80,7 +80,7 @@ export const stepsApi = {
         // Calculate difference in days using UTC timestamps
         const diffDays = Math.floor((currentDateUtc - entryDateUtc) / (1000 * 60 * 60 * 24));
 
-        if (diffDays === streak && entry.steps > 0) {
+        if (diffDays === streak && entry.step_count > 0) {
           streak++;
         } else {
           break;
@@ -89,7 +89,7 @@ export const stepsApi = {
     }
 
     return {
-      today: todayData?.steps || 0,
+      today: todayData?.step_count || 0,
       week: weekTotal,
       month: monthTotal,
       average: monthData && monthData.length > 0 ? Math.floor(monthTotal / monthData.length) : 0,
@@ -112,5 +112,30 @@ export const stepsApi = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  /**
+   * Fetches daily step history within a date range.
+   * Returns entries ordered by date descending (most recent first).
+   *
+   * @param startDate - Start date in YYYY-MM-DD format
+   * @param endDate - End date in YYYY-MM-DD format
+   * @returns Array of daily step entries
+   */
+  getDailyHistory: async (startDate: string, endDate: string): Promise<DailyStepEntry[]> => {
+    const { data, error } = await supabase
+      .from('step_entries')
+      .select('id, date, step_count, distance_meters')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map((entry) => ({
+      id: entry.id,
+      date: entry.date,
+      steps: entry.step_count,
+      distanceMeters: entry.distance_meters,
+    }));
   },
 };
