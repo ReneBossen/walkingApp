@@ -32,6 +32,23 @@ jest.mock('@components/common/ErrorMessage', () => ({
 }));
 
 jest.mock('../components', () => ({
+  DateRangePicker: ({ visible, testID, onDismiss, onConfirm }: any) => {
+    const RN = require('react-native');
+    if (!visible) return null;
+    return (
+      <RN.View testID={testID}>
+        <RN.TouchableOpacity testID={`${testID}-dismiss`} onPress={onDismiss}>
+          <RN.Text>Cancel</RN.Text>
+        </RN.TouchableOpacity>
+        <RN.TouchableOpacity
+          testID={`${testID}-confirm`}
+          onPress={() => onConfirm(new Date('2024-01-01'), new Date('2024-01-15'))}
+        >
+          <RN.Text>Apply</RN.Text>
+        </RN.TouchableOpacity>
+      </RN.View>
+    );
+  },
   StepHistoryItem: ({ entry, testID }: any) => {
     const RN = require('react-native');
     return (
@@ -64,6 +81,15 @@ jest.mock('react-native-paper', () => {
     ),
     Content: ({ title }: any) => (
       <RN.Text testID="appbar-title">{title}</RN.Text>
+    ),
+    Action: ({ icon, onPress, accessibilityLabel }: any) => (
+      <RN.TouchableOpacity
+        testID={`appbar-action-${icon}`}
+        onPress={onPress}
+        accessibilityLabel={accessibilityLabel}
+      >
+        <RN.Text>{icon}</RN.Text>
+      </RN.TouchableOpacity>
     ),
   };
 

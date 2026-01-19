@@ -44,7 +44,10 @@ export function StepHistoryItem({
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.surface }]}
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.outlineVariant },
+      ]}
       testID={testID}
       accessibilityLabel={`${formattedDate}: ${entry.steps.toLocaleString()} steps, ${formattedDistance}, ${percentage}% of goal`}
       accessibilityRole="text"
@@ -98,7 +101,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E0E0E0',
   },
   header: {
     marginBottom: 4,

@@ -9,12 +9,12 @@ import {
 } from 'react-native-paper';
 import { LoadingSpinner } from '@components/common/LoadingSpinner';
 import { ErrorMessage } from '@components/common/ErrorMessage';
-import { StepHistoryItem, StatsSummary, StepsChart } from './components';
+import { DateRangePicker, StepHistoryItem, StatsSummary, StepsChart } from './components';
 import { useStepsStore } from '@store/stepsStore';
 import { useUserStore } from '@store/userStore';
 import type { DailyStepEntry } from '@store/stepsStore';
 
-type ViewMode = 'daily' | 'weekly' | 'monthly';
+type ViewMode = 'daily' | 'weekly' | 'monthly' | 'custom';
 
 /**
  * Calculates the date range based on the selected view mode.
@@ -59,6 +59,8 @@ export default function StepsHistoryScreen() {
   const theme = useTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [customDateRange, setCustomDateRange] = useState<{ start: Date; end: Date } | null>(null);
 
   const {
     dailyHistory,
@@ -72,8 +74,13 @@ export default function StepsHistoryScreen() {
   const dailyGoal = currentUser?.preferences.daily_step_goal ?? 10000;
   const units = currentUser?.preferences.units ?? 'metric';
 
-  // Calculate date range based on view mode
-  const dateRange = useMemo(() => getDateRange(viewMode), [viewMode]);
+  // Calculate date range based on view mode or use custom range
+  const dateRange = useMemo(() => {
+    if (viewMode === 'custom' && customDateRange) {
+      return customDateRange;
+    }
+    return getDateRange(viewMode);
+  }, [viewMode, customDateRange]);
 
   // Fetch data when view mode changes
   useEffect(() => {
@@ -92,6 +99,24 @@ export default function StepsHistoryScreen() {
 
   const handleViewModeChange = useCallback((value: string) => {
     setViewMode(value as ViewMode);
+    // Reset custom date range when switching to preset modes
+    if (value !== 'custom') {
+      setCustomDateRange(null);
+    }
+  }, []);
+
+  const handleOpenDatePicker = useCallback(() => {
+    setIsDatePickerVisible(true);
+  }, []);
+
+  const handleCloseDatePicker = useCallback(() => {
+    setIsDatePickerVisible(false);
+  }, []);
+
+  const handleDateRangeConfirm = useCallback((start: Date, end: Date) => {
+    setCustomDateRange({ start, end });
+    setViewMode('custom');
+    setIsDatePickerVisible(false);
   }, []);
 
   const renderHistoryItem = useCallback(
@@ -108,12 +133,15 @@ export default function StepsHistoryScreen() {
 
   const keyExtractor = useCallback((item: DailyStepEntry) => item.id, []);
 
+  // Map viewMode for chart display (custom uses monthly-style chart)
+  const chartViewMode = viewMode === 'custom' ? 'monthly' : viewMode;
+
   const ListHeaderComponent = useMemo(
     () => (
       <>
         <StepsChart
           entries={dailyHistory}
-          viewMode={viewMode}
+          viewMode={chartViewMode}
           dailyGoal={dailyGoal}
           testID="steps-chart"
         />
@@ -138,7 +166,7 @@ export default function StepsHistoryScreen() {
         </View>
       </>
     ),
-    [dailyHistory, viewMode, dailyGoal, dateRange, units, theme.colors]
+    [dailyHistory, chartViewMode, dailyGoal, dateRange, units, theme.colors]
   );
 
   const ListEmptyComponent = useMemo(
@@ -167,8 +195,21 @@ export default function StepsHistoryScreen() {
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Appbar.Header elevated>
           <Appbar.Content title="Steps History" />
+          <Appbar.Action
+            icon="calendar"
+            onPress={handleOpenDatePicker}
+            accessibilityLabel="Select custom date range"
+          />
         </Appbar.Header>
         <LoadingSpinner />
+        <DateRangePicker
+          visible={isDatePickerVisible}
+          startDate={dateRange.start}
+          endDate={dateRange.end}
+          onDismiss={handleCloseDatePicker}
+          onConfirm={handleDateRangeConfirm}
+          testID="date-range-picker"
+        />
       </View>
     );
   }
@@ -179,8 +220,21 @@ export default function StepsHistoryScreen() {
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Appbar.Header elevated>
           <Appbar.Content title="Steps History" />
+          <Appbar.Action
+            icon="calendar"
+            onPress={handleOpenDatePicker}
+            accessibilityLabel="Select custom date range"
+          />
         </Appbar.Header>
         <ErrorMessage message={historyError} onRetry={handleRefresh} />
+        <DateRangePicker
+          visible={isDatePickerVisible}
+          startDate={dateRange.start}
+          endDate={dateRange.end}
+          onDismiss={handleCloseDatePicker}
+          onConfirm={handleDateRangeConfirm}
+          testID="date-range-picker"
+        />
       </View>
     );
   }
@@ -189,6 +243,11 @@ export default function StepsHistoryScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header elevated>
         <Appbar.Content title="Steps History" />
+        <Appbar.Action
+          icon="calendar"
+          onPress={handleOpenDatePicker}
+          accessibilityLabel="Select custom date range"
+        />
       </Appbar.Header>
 
       <View style={styles.segmentContainer}>
@@ -199,6 +258,7 @@ export default function StepsHistoryScreen() {
             { value: 'daily', label: 'Daily' },
             { value: 'weekly', label: 'Weekly' },
             { value: 'monthly', label: 'Monthly' },
+            ...(viewMode === 'custom' ? [{ value: 'custom', label: 'Custom' }] : []),
           ]}
           style={styles.segmentedButtons}
         />
@@ -220,6 +280,15 @@ export default function StepsHistoryScreen() {
           />
         }
         showsVerticalScrollIndicator={false}
+      />
+
+      <DateRangePicker
+        visible={isDatePickerVisible}
+        startDate={dateRange.start}
+        endDate={dateRange.end}
+        onDismiss={handleCloseDatePicker}
+        onConfirm={handleDateRangeConfirm}
+        testID="date-range-picker"
       />
     </View>
   );

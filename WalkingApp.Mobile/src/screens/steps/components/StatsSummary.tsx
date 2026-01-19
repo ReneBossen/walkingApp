@@ -29,11 +29,7 @@ export function StatsSummary({
     0
   );
 
-  // Calculate days in range for average
-  const daysDiff = Math.ceil(
-    (dateRange.end.getTime() - dateRange.start.getTime()) /
-      (1000 * 60 * 60 * 24)
-  ) + 1;
+  // Calculate average steps per day (based on entries with data)
   const averageSteps =
     entries.length > 0 ? Math.round(totalSteps / entries.length) : 0;
 
