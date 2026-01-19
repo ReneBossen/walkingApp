@@ -30,7 +30,6 @@ export default function FriendsListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   const {
     friends,
@@ -56,13 +55,6 @@ export default function FriendsListScreen() {
     await Promise.all([fetchFriendsWithSteps(), fetchRequests()]);
     setIsRefreshing(false);
   }, [fetchFriendsWithSteps, fetchRequests]);
-
-  const handleSearchToggle = useCallback(() => {
-    setIsSearchVisible((prev) => !prev);
-    if (isSearchVisible) {
-      setSearchQuery('');
-    }
-  }, [isSearchVisible]);
 
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
@@ -189,16 +181,20 @@ export default function FriendsListScreen() {
         <Appbar.Header elevated>
           <Appbar.Content title="Friends" />
           <Appbar.Action
-            icon="magnify"
-            onPress={handleSearchToggle}
-            accessibilityLabel="Search friends"
-          />
-          <Appbar.Action
             icon="account-plus"
             onPress={handleAddFriend}
             accessibilityLabel="Add friend"
           />
         </Appbar.Header>
+        <View style={styles.searchContainer}>
+          <Searchbar
+            placeholder="Search friends..."
+            onChangeText={handleSearchChange}
+            value={searchQuery}
+            style={styles.searchBar}
+            testID="friends-search-bar"
+          />
+        </View>
         <LoadingSpinner />
       </View>
     );
@@ -211,16 +207,20 @@ export default function FriendsListScreen() {
         <Appbar.Header elevated>
           <Appbar.Content title="Friends" />
           <Appbar.Action
-            icon="magnify"
-            onPress={handleSearchToggle}
-            accessibilityLabel="Search friends"
-          />
-          <Appbar.Action
             icon="account-plus"
             onPress={handleAddFriend}
             accessibilityLabel="Add friend"
           />
         </Appbar.Header>
+        <View style={styles.searchContainer}>
+          <Searchbar
+            placeholder="Search friends..."
+            onChangeText={handleSearchChange}
+            value={searchQuery}
+            style={styles.searchBar}
+            testID="friends-search-bar"
+          />
+        </View>
         <ErrorMessage message={error} onRetry={handleRefresh} />
       </View>
     );
@@ -231,28 +231,21 @@ export default function FriendsListScreen() {
       <Appbar.Header elevated>
         <Appbar.Content title="Friends" />
         <Appbar.Action
-          icon="magnify"
-          onPress={handleSearchToggle}
-          accessibilityLabel="Search friends"
-        />
-        <Appbar.Action
           icon="account-plus"
           onPress={handleAddFriend}
           accessibilityLabel="Add friend"
         />
       </Appbar.Header>
 
-      {isSearchVisible && (
-        <View style={styles.searchContainer}>
-          <Searchbar
-            placeholder="Search friends..."
-            onChangeText={handleSearchChange}
-            value={searchQuery}
-            style={styles.searchBar}
-            testID="friends-search-bar"
-          />
-        </View>
-      )}
+      <View style={styles.searchContainer}>
+        <Searchbar
+          placeholder="Search friends..."
+          onChangeText={handleSearchChange}
+          value={searchQuery}
+          style={styles.searchBar}
+          testID="friends-search-bar"
+        />
+      </View>
 
       <FlatList
         data={sortedFriends}
