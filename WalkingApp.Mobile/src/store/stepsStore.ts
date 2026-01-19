@@ -19,26 +19,43 @@ export interface StepStats {
   streak: number;
 }
 
+/**
+ * Represents a daily step entry for history display.
+ */
+export interface DailyStepEntry {
+  id: string;
+  date: string;
+  steps: number;
+  distanceMeters: number;
+}
+
 interface StepsState {
   todaySteps: number;
   stats: StepStats | null;
   history: StepEntry[];
+  dailyHistory: DailyStepEntry[];
   isLoading: boolean;
+  isHistoryLoading: boolean;
   error: string | null;
+  historyError: string | null;
 
   // Actions
   addSteps: (steps: number, distanceMeters: number) => Promise<void>;
   fetchTodaySteps: () => Promise<void>;
   fetchStats: () => Promise<void>;
   fetchHistory: (period: 'daily' | 'weekly' | 'monthly') => Promise<void>;
+  fetchDailyHistory: (startDate: string, endDate: string) => Promise<void>;
 }
 
 export const useStepsStore = create<StepsState>((set) => ({
   todaySteps: 0,
   stats: null,
   history: [],
+  dailyHistory: [],
   isLoading: false,
+  isHistoryLoading: false,
   error: null,
+  historyError: null,
 
   addSteps: async (steps, distanceMeters) => {
     set({ isLoading: true, error: null });
@@ -79,6 +96,16 @@ export const useStepsStore = create<StepsState>((set) => ({
       set({ history, isLoading: false });
     } catch (error: unknown) {
       set({ error: getErrorMessage(error), isLoading: false });
+    }
+  },
+
+  fetchDailyHistory: async (startDate, endDate) => {
+    set({ isHistoryLoading: true, historyError: null });
+    try {
+      const dailyHistory = await stepsApi.getDailyHistory(startDate, endDate);
+      set({ dailyHistory, isHistoryLoading: false });
+    } catch (error: unknown) {
+      set({ historyError: getErrorMessage(error), isHistoryLoading: false });
     }
   },
 }));

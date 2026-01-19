@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { StepEntry, StepStats } from '@store/stepsStore';
+import { StepEntry, StepStats, DailyStepEntry } from '@store/stepsStore';
 
 export const stepsApi = {
   addSteps: async (steps: number, distanceMeters: number): Promise<StepEntry> => {
@@ -112,5 +112,30 @@ export const stepsApi = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  /**
+   * Fetches daily step history within a date range.
+   * Returns entries ordered by date descending (most recent first).
+   *
+   * @param startDate - Start date in YYYY-MM-DD format
+   * @param endDate - End date in YYYY-MM-DD format
+   * @returns Array of daily step entries
+   */
+  getDailyHistory: async (startDate: string, endDate: string): Promise<DailyStepEntry[]> => {
+    const { data, error } = await supabase
+      .from('step_entries')
+      .select('id, date, steps, distance_meters')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map((entry) => ({
+      id: entry.id,
+      date: entry.date,
+      steps: entry.steps,
+      distanceMeters: entry.distance_meters,
+    }));
   },
 };
