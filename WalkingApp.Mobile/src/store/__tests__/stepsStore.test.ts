@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import { useStepsStore, StepEntry, StepStats } from '../stepsStore';
+import { useStepsStore, StepEntry, StepStats, DailyStepEntry } from '../stepsStore';
 import { stepsApi } from '@services/api/stepsApi';
 
 // Mock the steps API
@@ -25,6 +25,12 @@ describe('stepsStore', () => {
     streak: 5,
   };
 
+  const mockDailyHistory: DailyStepEntry[] = [
+    { id: '1', date: '2024-01-15', steps: 8500, distanceMeters: 6800 },
+    { id: '2', date: '2024-01-14', steps: 9200, distanceMeters: 7360 },
+    { id: '3', date: '2024-01-13', steps: 7800, distanceMeters: 6240 },
+  ];
+
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset store state before each test
@@ -32,8 +38,11 @@ describe('stepsStore', () => {
       todaySteps: 0,
       stats: null,
       history: [],
+      dailyHistory: [],
       isLoading: false,
+      isHistoryLoading: false,
       error: null,
+      historyError: null,
     });
   });
 
@@ -44,8 +53,11 @@ describe('stepsStore', () => {
       expect(result.current.todaySteps).toBe(0);
       expect(result.current.stats).toBeNull();
       expect(result.current.history).toEqual([]);
+      expect(result.current.dailyHistory).toEqual([]);
       expect(result.current.isLoading).toBe(false);
+      expect(result.current.isHistoryLoading).toBe(false);
       expect(result.current.error).toBeNull();
+      expect(result.current.historyError).toBeNull();
     });
   });
 
@@ -377,6 +389,170 @@ describe('stepsStore', () => {
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
+    });
+  });
+
+  describe('fetchDailyHistory', () => {
+    it('should fetch daily history successfully', async () => {
+      mockStepsApi.getDailyHistory.mockResolvedValue(mockDailyHistory);
+
+      const { result } = renderHook(() => useStepsStore());
+
+      await act(async () => {
+        await result.current.fetchDailyHistory('2024-01-09', '2024-01-15');
+      });
+
+      expect(mockStepsApi.getDailyHistory).toHaveBeenCalledWith('2024-01-09', '2024-01-15');
+      expect(result.current.dailyHistory).toEqual(mockDailyHistory);
+      expect(result.current.isHistoryLoading).toBe(false);
+      expect(result.current.historyError).toBeNull();
+    });
+
+    it('should set isHistoryLoading state during fetch', async () => {
+      mockStepsApi.getDailyHistory.mockImplementation(() =>
+        new Promise((resolve) => setTimeout(() => resolve(mockDailyHistory), 100))
+      );
+
+      const { result } = renderHook(() => useStepsStore());
+
+      act(() => {
+        result.current.fetchDailyHistory('2024-01-09', '2024-01-15');
+      });
+
+      expect(result.current.isHistoryLoading).toBe(true);
+
+      await waitFor(() => {
+        expect(result.current.isHistoryLoading).toBe(false);
+      });
+    });
+
+    it('should handle empty daily history', async () => {
+      mockStepsApi.getDailyHistory.mockResolvedValue([]);
+
+      const { result } = renderHook(() => useStepsStore());
+
+      await act(async () => {
+        await result.current.fetchDailyHistory('2024-01-09', '2024-01-15');
+      });
+
+      expect(result.current.dailyHistory).toEqual([]);
+      expect(result.current.isHistoryLoading).toBe(false);
+    });
+
+    it('should handle fetch daily history error', async () => {
+      const error = new Error('Daily history unavailable');
+      mockStepsApi.getDailyHistory.mockRejectedValue(error);
+
+      const { result } = renderHook(() => useStepsStore());
+
+      await act(async () => {
+        await result.current.fetchDailyHistory('2024-01-09', '2024-01-15');
+      });
+
+      await waitFor(() => {
+        expect(result.current.historyError).toBe('Daily history unavailable');
+      });
+      expect(result.current.isHistoryLoading).toBe(false);
+    });
+
+    it('should clear previous historyError on new fetch', async () => {
+      mockStepsApi.getDailyHistory.mockResolvedValue(mockDailyHistory);
+
+      const { result } = renderHook(() => useStepsStore());
+
+      useStepsStore.setState({ historyError: 'Previous error' });
+
+      await act(async () => {
+        await result.current.fetchDailyHistory('2024-01-09', '2024-01-15');
+      });
+
+      expect(result.current.historyError).toBeNull();
+    });
+
+    it('should replace previous dailyHistory on new fetch', async () => {
+      const oldHistory: DailyStepEntry[] = [
+        { id: 'old', date: '2024-01-01', steps: 1000, distanceMeters: 800 },
+      ];
+      const newHistory: DailyStepEntry[] = [
+        { id: 'new', date: '2024-01-15', steps: 8000, distanceMeters: 6400 },
+      ];
+
+      mockStepsApi.getDailyHistory.mockResolvedValue(newHistory);
+
+      const { result } = renderHook(() => useStepsStore());
+
+      useStepsStore.setState({ dailyHistory: oldHistory });
+
+      await act(async () => {
+        await result.current.fetchDailyHistory('2024-01-09', '2024-01-15');
+      });
+
+      expect(result.current.dailyHistory).toEqual(newHistory);
+      expect(result.current.dailyHistory).not.toContainEqual(oldHistory[0]);
+    });
+
+    it('should not affect main isLoading state', async () => {
+      mockStepsApi.getDailyHistory.mockImplementation(() =>
+        new Promise((resolve) => setTimeout(() => resolve(mockDailyHistory), 100))
+      );
+
+      const { result } = renderHook(() => useStepsStore());
+
+      act(() => {
+        result.current.fetchDailyHistory('2024-01-09', '2024-01-15');
+      });
+
+      // isHistoryLoading should be true but isLoading should remain false
+      expect(result.current.isHistoryLoading).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+
+      await waitFor(() => {
+        expect(result.current.isHistoryLoading).toBe(false);
+      });
+    });
+
+    it('should not affect main error state', async () => {
+      const error = new Error('Daily history error');
+      mockStepsApi.getDailyHistory.mockRejectedValue(error);
+
+      const { result } = renderHook(() => useStepsStore());
+
+      useStepsStore.setState({ error: null });
+
+      await act(async () => {
+        await result.current.fetchDailyHistory('2024-01-09', '2024-01-15');
+      });
+
+      // historyError should be set but error should remain null
+      expect(result.current.historyError).toBe('Daily history error');
+      expect(result.current.error).toBeNull();
+    });
+
+    it('should handle different date ranges', async () => {
+      mockStepsApi.getDailyHistory.mockResolvedValue(mockDailyHistory);
+
+      const { result } = renderHook(() => useStepsStore());
+
+      await act(async () => {
+        await result.current.fetchDailyHistory('2024-01-01', '2024-01-31');
+      });
+
+      expect(mockStepsApi.getDailyHistory).toHaveBeenCalledWith('2024-01-01', '2024-01-31');
+    });
+
+    it('should handle single day range', async () => {
+      const singleDayHistory: DailyStepEntry[] = [
+        { id: '1', date: '2024-01-15', steps: 10000, distanceMeters: 8000 },
+      ];
+      mockStepsApi.getDailyHistory.mockResolvedValue(singleDayHistory);
+
+      const { result } = renderHook(() => useStepsStore());
+
+      await act(async () => {
+        await result.current.fetchDailyHistory('2024-01-15', '2024-01-15');
+      });
+
+      expect(result.current.dailyHistory).toEqual(singleDayHistory);
     });
   });
 });
