@@ -1,4 +1,12 @@
-import { usersApi, UserProfileData } from '../usersApi';
+import {
+  usersApi,
+  UserProfileData,
+  PublicUserProfile,
+  UserStats,
+  WeeklyActivity,
+  Achievement,
+  MutualGroup,
+} from '../usersApi';
 import { supabase } from '@services/supabase';
 
 // Mock the supabase client
@@ -298,6 +306,426 @@ describe('usersApi', () => {
       );
 
       dateSpy.mockRestore();
+    });
+  });
+
+  describe('getUserProfile', () => {
+    const mockPublicProfile = {
+      id: '456',
+      display_name: 'Sarah Johnson',
+      username: 'sarah.j',
+      bio: 'Morning walks!',
+      location: 'Oakland, CA',
+      avatar_url: 'https://example.com/sarah.jpg',
+      created_at: '2024-12-10T08:00:00Z',
+    };
+
+    it('should fetch user profile successfully', async () => {
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: mockPublicProfile,
+        error: null,
+      });
+
+      (mockSupabase.from as jest.Mock).mockReturnValue({
+        select: mockSelect,
+      });
+
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+
+      mockEq.mockReturnValue({
+        single: mockSingle,
+      });
+
+      // Mock preferences query for privacy check
+      const mockPrefsSelect = jest.fn().mockReturnThis();
+      const mockPrefsEq = jest.fn().mockReturnThis();
+      const mockPrefsSingle = jest.fn().mockResolvedValue({
+        data: { privacy_find_me: 'public' },
+        error: null,
+      });
+
+      // Second call to from() for user_preferences
+      (mockSupabase.from as jest.Mock)
+        .mockReturnValueOnce({
+          select: mockSelect,
+        })
+        .mockReturnValueOnce({
+          select: mockPrefsSelect,
+        });
+
+      mockPrefsSelect.mockReturnValue({
+        eq: mockPrefsEq,
+      });
+
+      mockPrefsEq.mockReturnValue({
+        single: mockPrefsSingle,
+      });
+
+      const result = await usersApi.getUserProfile('456');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('users');
+      expect(result.id).toBe('456');
+      expect(result.display_name).toBe('Sarah Johnson');
+      expect(result.is_private).toBe(false);
+    });
+
+    it('should mark profile as private when privacy_find_me is private', async () => {
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: mockPublicProfile,
+        error: null,
+      });
+
+      const mockPrefsSelect = jest.fn().mockReturnThis();
+      const mockPrefsEq = jest.fn().mockReturnThis();
+      const mockPrefsSingle = jest.fn().mockResolvedValue({
+        data: { privacy_find_me: 'private' },
+        error: null,
+      });
+
+      (mockSupabase.from as jest.Mock)
+        .mockReturnValueOnce({
+          select: mockSelect,
+        })
+        .mockReturnValueOnce({
+          select: mockPrefsSelect,
+        });
+
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ single: mockSingle });
+
+      mockPrefsSelect.mockReturnValue({ eq: mockPrefsEq });
+      mockPrefsEq.mockReturnValue({ single: mockPrefsSingle });
+
+      const result = await usersApi.getUserProfile('456');
+
+      expect(result.is_private).toBe(true);
+      // Bio and location should be undefined for private profiles
+      expect(result.bio).toBeUndefined();
+      expect(result.location).toBeUndefined();
+    });
+
+    it('should throw error when user not found', async () => {
+      const mockError = { message: 'User not found' };
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: null,
+        error: mockError,
+      });
+
+      (mockSupabase.from as jest.Mock).mockReturnValue({
+        select: mockSelect,
+      });
+
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ single: mockSingle });
+
+      await expect(usersApi.getUserProfile('456')).rejects.toEqual(mockError);
+    });
+  });
+
+  describe('getUserStats', () => {
+    it('should fetch user stats successfully', async () => {
+      // Mock friendships count
+      (mockSupabase.from as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              or: jest.fn().mockResolvedValue({ count: 10, error: null }),
+            }),
+          }),
+        })
+        // Mock group_memberships count
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ count: 5, error: null }),
+          }),
+        });
+
+      const result = await usersApi.getUserStats('123');
+
+      expect(result.friends_count).toBe(10);
+      expect(result.groups_count).toBe(5);
+      expect(result.badges_count).toBe(0); // Currently hardcoded as badges are not implemented
+    });
+
+    it('should return zero counts when no data', async () => {
+      (mockSupabase.from as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              or: jest.fn().mockResolvedValue({ count: null, error: null }),
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ count: null, error: null }),
+          }),
+        });
+
+      const result = await usersApi.getUserStats('123');
+
+      expect(result.friends_count).toBe(0);
+      expect(result.groups_count).toBe(0);
+    });
+  });
+
+  describe('getWeeklyActivity', () => {
+    it('should calculate weekly activity correctly', async () => {
+      const mockEntries = [
+        { date: '2025-01-24', step_count: 10000, distance_meters: 8000 },
+        { date: '2025-01-23', step_count: 8000, distance_meters: 6400 },
+        { date: '2025-01-22', step_count: 12000, distance_meters: 9600 },
+      ];
+
+      (mockSupabase.from as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              gte: jest.fn().mockReturnValue({
+                lte: jest.fn().mockReturnValue({
+                  order: jest.fn().mockResolvedValue({ data: mockEntries, error: null }),
+                }),
+              }),
+            }),
+          }),
+        })
+        // For streak calculation
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: mockEntries, error: null }),
+            }),
+          }),
+        });
+
+      const result = await usersApi.getWeeklyActivity('123');
+
+      expect(result.total_steps).toBe(30000);
+      expect(result.total_distance_meters).toBe(24000);
+      expect(result.average_steps_per_day).toBe(10000);
+    });
+
+    it('should return zero values when no entries', async () => {
+      (mockSupabase.from as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              gte: jest.fn().mockReturnValue({
+                lte: jest.fn().mockReturnValue({
+                  order: jest.fn().mockResolvedValue({ data: [], error: null }),
+                }),
+              }),
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+          }),
+        });
+
+      const result = await usersApi.getWeeklyActivity('123');
+
+      expect(result.total_steps).toBe(0);
+      expect(result.total_distance_meters).toBe(0);
+      expect(result.average_steps_per_day).toBe(0);
+      expect(result.current_streak).toBe(0);
+    });
+  });
+
+  describe('getAchievements', () => {
+    it('should return empty array (achievements not implemented)', async () => {
+      const result = await usersApi.getAchievements('123');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getMutualGroups', () => {
+    it('should fetch mutual groups successfully', async () => {
+      // Mock authenticated user
+      mockGetUser.mockResolvedValue({
+        data: { user: { id: '123' } },
+        error: null,
+      });
+
+      // Mock current user's groups
+      (mockSupabase.from as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({
+              data: [{ group_id: 'group-1' }, { group_id: 'group-2' }],
+              error: null,
+            }),
+          }),
+        })
+        // Mock other user's groups with join
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              in: jest.fn().mockResolvedValue({
+                data: [
+                  { group_id: 'group-1', groups: { id: 'group-1', name: 'Morning Walkers' } },
+                ],
+                error: null,
+              }),
+            }),
+          }),
+        });
+
+      const result = await usersApi.getMutualGroups('456');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({ id: 'group-1', name: 'Morning Walkers' });
+    });
+
+    it('should return empty array when no mutual groups', async () => {
+      mockGetUser.mockResolvedValue({
+        data: { user: { id: '123' } },
+        error: null,
+      });
+
+      (mockSupabase.from as jest.Mock)
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({
+              data: [{ group_id: 'group-1' }],
+              error: null,
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              in: jest.fn().mockResolvedValue({
+                data: [],
+                error: null,
+              }),
+            }),
+          }),
+        });
+
+      const result = await usersApi.getMutualGroups('456');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when user has no groups', async () => {
+      mockGetUser.mockResolvedValue({
+        data: { user: { id: '123' } },
+        error: null,
+      });
+
+      (mockSupabase.from as jest.Mock).mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({
+            data: [],
+            error: null,
+          }),
+        }),
+      });
+
+      const result = await usersApi.getMutualGroups('456');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('checkUsernameAvailable', () => {
+    it('should return true when username is available', async () => {
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      (mockSupabase.from as jest.Mock).mockReturnValue({
+        select: mockSelect,
+      });
+
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+
+      const result = await usersApi.checkUsernameAvailable('newusername');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('users');
+      expect(result).toBe(true);
+    });
+
+    it('should return false when username is taken', async () => {
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockResolvedValue({
+        data: [{ id: '789' }],
+        error: null,
+      });
+
+      (mockSupabase.from as jest.Mock).mockReturnValue({
+        select: mockSelect,
+      });
+
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+
+      const result = await usersApi.checkUsernameAvailable('takenusername');
+
+      expect(result).toBe(false);
+    });
+
+    it('should exclude current user when checking', async () => {
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockNeq = jest.fn().mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      (mockSupabase.from as jest.Mock).mockReturnValue({
+        select: mockSelect,
+      });
+
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+
+      mockEq.mockReturnValue({
+        neq: mockNeq,
+      });
+
+      const result = await usersApi.checkUsernameAvailable('myusername', '123');
+
+      expect(mockNeq).toHaveBeenCalledWith('id', '123');
+      expect(result).toBe(true);
+    });
+
+    it('should throw error on database error', async () => {
+      const mockError = { message: 'Database error' };
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockResolvedValue({
+        data: null,
+        error: mockError,
+      });
+
+      (mockSupabase.from as jest.Mock).mockReturnValue({
+        select: mockSelect,
+      });
+
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+
+      await expect(usersApi.checkUsernameAvailable('username')).rejects.toEqual(mockError);
     });
   });
 });

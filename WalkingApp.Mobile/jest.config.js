@@ -10,7 +10,7 @@ module.exports = {
     }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|expo|@expo|@supabase|@react-navigation|react-native-paper|react-native-safe-area-context)/)',
+    'node_modules/(?!(react-native|@react-native|expo|@expo|@supabase|@react-navigation|react-native-paper|react-native-safe-area-context|expo-image-picker|expo-modules-core)/)',
   ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
@@ -29,6 +29,7 @@ module.exports = {
     '^react-native$': '<rootDir>/__mocks__/react-native.ts',
     '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.ts',
     '^expo-clipboard$': '<rootDir>/__mocks__/expo-clipboard.ts',
+    '^expo-image-picker$': '<rootDir>/__mocks__/expo-image-picker.ts',
   },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
