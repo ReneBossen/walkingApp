@@ -323,7 +323,6 @@ export const groupsApi = {
         joined_at,
         users (
           display_name,
-          username,
           avatar_url
         )
       `)
@@ -334,7 +333,7 @@ export const groupsApi = {
     return (data || []).map((member: any, index: number) => ({
       user_id: member.user_id,
       display_name: member.users.display_name,
-      username: member.users.username,
+      username: member.users.display_name, // Use display_name as username fallback
       avatar_url: member.users.avatar_url,
       role: member.role,
       joined_at: member.joined_at,
@@ -587,7 +586,6 @@ export const groupsApi = {
         joined_at,
         users (
           display_name,
-          username,
           avatar_url
         )
       `)
@@ -599,7 +597,7 @@ export const groupsApi = {
     return (data || []).map((member: any, index: number) => ({
       user_id: member.user_id,
       display_name: member.users?.display_name || 'Unknown',
-      username: member.users?.username || '',
+      username: member.users?.display_name || '', // Use display_name as username fallback
       avatar_url: member.users?.avatar_url,
       role: member.role,
       joined_at: member.joined_at,
