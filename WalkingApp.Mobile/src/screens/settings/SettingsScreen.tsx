@@ -1,13 +1,24 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Button, Text } from 'react-native-paper';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { Button, Text, List, Divider, useTheme } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@store/authStore';
-import { useAppTheme } from '@hooks/useAppTheme';
+import { useUserStore } from '@store/userStore';
+import type { SettingsStackParamList } from '@navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<SettingsStackParamList, 'Settings'>;
 
 export default function SettingsScreen() {
-  const { paperTheme } = useAppTheme();
+  const theme = useTheme();
+  const navigation = useNavigation<NavigationProp>();
   const signOut = useAuthStore((state) => state.signOut);
+  const currentUser = useUserStore((state) => state.currentUser);
   const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleProfilePress = () => {
+    navigation.navigate('Profile');
+  };
 
   const handleLogout = async () => {
     setIsLoading(true);
@@ -21,45 +32,81 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text variant="headlineMedium" style={styles.title}>
-        Settings
-      </Text>
-      <Text variant="bodyMedium" style={styles.subtitle}>
-        Temporary logout for testing
-      </Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={styles.content}
+    >
+      {/* Account Section */}
+      <View style={styles.section}>
+        <Text
+          variant="titleSmall"
+          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+        >
+          Account
+        </Text>
+        <List.Item
+          title="Profile"
+          description={currentUser?.display_name || 'View and edit your profile'}
+          left={(props) => <List.Icon {...props} icon="account" />}
+          right={(props) => <List.Icon {...props} icon="chevron-right" />}
+          onPress={handleProfilePress}
+          style={styles.listItem}
+          accessibilityLabel="Go to profile"
+          testID="settings-profile"
+        />
+      </View>
 
-      <Button
-        mode="contained"
-        onPress={handleLogout}
-        loading={isLoading}
-        disabled={isLoading}
-        style={styles.button}
-        buttonColor={paperTheme.colors.error}
-      >
-        Logout
-      </Button>
-    </View>
+      <Divider style={styles.divider} />
+
+      {/* Danger Zone */}
+      <View style={styles.section}>
+        <Text
+          variant="titleSmall"
+          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+        >
+          Session
+        </Text>
+        <Button
+          mode="contained"
+          onPress={handleLogout}
+          loading={isLoading}
+          disabled={isLoading}
+          style={styles.logoutButton}
+          buttonColor={theme.colors.error}
+          textColor={theme.colors.onError}
+          accessibilityLabel="Log out"
+          testID="settings-logout"
+        >
+          Log Out
+        </Button>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
   },
-  title: {
-    fontWeight: '600',
+  content: {
+    paddingBottom: 24,
+  },
+  section: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  sectionTitle: {
     marginBottom: 8,
+    marginLeft: 4,
+    fontWeight: '600',
   },
-  subtitle: {
-    marginBottom: 32,
-    opacity: 0.6,
+  listItem: {
+    borderRadius: 8,
   },
-  button: {
-    minWidth: 200,
+  divider: {
+    marginHorizontal: 16,
+  },
+  logoutButton: {
+    marginTop: 8,
   },
 });

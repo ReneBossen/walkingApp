@@ -19,12 +19,12 @@ export default function SettingsStackNavigator() {
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="EditProfile"
         component={EditProfileScreen}
-        options={{ title: 'Edit Profile' }}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

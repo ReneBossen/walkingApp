@@ -1,5 +1,15 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import { useUserStore, UserProfile, UserPreferences } from '../userStore';
+import {
+  useUserStore,
+  UserProfile,
+  UserPreferences,
+  ViewedUserState,
+  PublicUserProfile,
+  UserStats,
+  WeeklyActivity,
+  Achievement,
+  MutualGroup,
+} from '../userStore';
 import { usersApi, UserProfileData } from '@services/api/usersApi';
 import { userPreferencesApi } from '@services/api/userPreferencesApi';
 
@@ -14,11 +24,7 @@ describe('userStore', () => {
   // Profile data (from users table)
   const mockProfileData: UserProfileData = {
     id: '123',
-    email: 'test@example.com',
     display_name: 'Test User',
-    username: 'testuser',
-    bio: 'Test bio',
-    location: 'Test City',
     avatar_url: 'https://example.com/avatar.jpg',
     onboarding_completed: true,
     created_at: '2024-01-01T00:00:00Z',
@@ -47,8 +53,10 @@ describe('userStore', () => {
     // Reset store state before each test
     useUserStore.setState({
       currentUser: null,
+      viewedUser: null,
       themePreference: 'system',
       isLoading: false,
+      isLoadingViewedUser: false,
       error: null,
     });
   });
@@ -140,7 +148,7 @@ describe('userStore', () => {
 
   describe('updateProfile', () => {
     it('should update profile successfully', async () => {
-      const updates = { display_name: 'Updated Name', bio: 'Updated bio' };
+      const updates = { display_name: 'Updated Name' };
       const updatedProfileData = { ...mockProfileData, ...updates };
 
       mockUsersApi.updateProfile.mockResolvedValue(updatedProfileData);
@@ -155,7 +163,6 @@ describe('userStore', () => {
 
       expect(mockUsersApi.updateProfile).toHaveBeenCalledWith(updates);
       expect(result.current.currentUser?.display_name).toBe('Updated Name');
-      expect(result.current.currentUser?.bio).toBe('Updated bio');
       // Preferences should be preserved
       expect(result.current.currentUser?.preferences).toEqual(mockPreferences);
       expect(result.current.isLoading).toBe(false);
@@ -163,8 +170,8 @@ describe('userStore', () => {
     });
 
     it('should handle partial updates', async () => {
-      const updates = { bio: 'New bio only' };
-      const updatedProfileData = { ...mockProfileData, bio: 'New bio only' };
+      const updates = { display_name: 'New Name Only' };
+      const updatedProfileData = { ...mockProfileData, display_name: 'New Name Only' };
 
       mockUsersApi.updateProfile.mockResolvedValue(updatedProfileData);
 
@@ -176,7 +183,7 @@ describe('userStore', () => {
       });
 
       expect(mockUsersApi.updateProfile).toHaveBeenCalledWith(updates);
-      expect(result.current.currentUser?.bio).toBe('New bio only');
+      expect(result.current.currentUser?.display_name).toBe('New Name Only');
     });
 
     it('should handle update error', async () => {
@@ -448,7 +455,6 @@ describe('userStore', () => {
       });
 
       expect(result.current.currentUser?.display_name).toBe('Test User');
-      expect(result.current.currentUser?.email).toBe('test@example.com');
       expect(result.current.currentUser?.avatar_url).toBe(avatarUrl);
     });
   });
@@ -523,6 +529,331 @@ describe('userStore', () => {
       expect(result.current.themePreference).toBe('system');
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
+    });
+
+    it('should also clear viewedUser state', () => {
+      const { result } = renderHook(() => useUserStore());
+
+      const mockViewedUser: ViewedUserState = {
+        profile: {
+          id: '456',
+          display_name: 'Other User',
+          created_at: '2024-01-01T00:00:00Z',
+          is_private: false,
+        },
+        stats: { friends_count: 10, groups_count: 5, badges_count: 3 },
+        weeklyActivity: null,
+        achievements: [],
+        mutualGroups: [],
+      };
+
+      act(() => {
+        useUserStore.setState({
+          currentUser: mockUserProfile,
+          viewedUser: mockViewedUser,
+          isLoadingViewedUser: true,
+        });
+      });
+
+      expect(result.current.viewedUser).not.toBeNull();
+
+      act(() => {
+        result.current.clearUser();
+      });
+
+      expect(result.current.viewedUser).toBeNull();
+      expect(result.current.isLoadingViewedUser).toBe(false);
+    });
+  });
+
+  describe('fetchUserProfile', () => {
+    const mockPublicProfile: PublicUserProfile = {
+      id: '456',
+      display_name: 'Sarah Johnson',
+      avatar_url: 'https://example.com/sarah.jpg',
+      created_at: '2024-12-10T08:00:00Z',
+      is_private: false,
+    };
+
+    const mockUserStats: UserStats = {
+      friends_count: 237,
+      groups_count: 12,
+      badges_count: 18,
+    };
+
+    const mockWeeklyActivity: WeeklyActivity = {
+      total_steps: 78432,
+      total_distance_meters: 62740,
+      average_steps_per_day: 11204,
+      current_streak: 24,
+    };
+
+    const mockAchievements: Achievement[] = [
+      {
+        id: 'ach-1',
+        name: '500K Club',
+        description: 'Walk 500,000 steps',
+        icon: 'trophy',
+        earned_at: '2025-01-05T12:00:00Z',
+      },
+    ];
+
+    const mockMutualGroups: MutualGroup[] = [
+      { id: 'group-1', name: 'Morning Walkers' },
+      { id: 'group-2', name: 'Weekend Warriors' },
+    ];
+
+    it('should fetch user profile successfully', async () => {
+      mockUsersApi.getUserProfile.mockResolvedValue(mockPublicProfile);
+      mockUsersApi.getUserStats.mockResolvedValue(mockUserStats);
+      mockUsersApi.getWeeklyActivity.mockResolvedValue(mockWeeklyActivity);
+      mockUsersApi.getAchievements.mockResolvedValue(mockAchievements);
+      mockUsersApi.getMutualGroups.mockResolvedValue(mockMutualGroups);
+
+      const { result } = renderHook(() => useUserStore());
+
+      await act(async () => {
+        await result.current.fetchUserProfile('456');
+      });
+
+      expect(mockUsersApi.getUserProfile).toHaveBeenCalledWith('456');
+      expect(mockUsersApi.getUserStats).toHaveBeenCalledWith('456');
+      expect(mockUsersApi.getWeeklyActivity).toHaveBeenCalledWith('456');
+      expect(mockUsersApi.getAchievements).toHaveBeenCalledWith('456');
+      expect(mockUsersApi.getMutualGroups).toHaveBeenCalledWith('456');
+
+      expect(result.current.viewedUser).toEqual({
+        profile: mockPublicProfile,
+        stats: mockUserStats,
+        weeklyActivity: mockWeeklyActivity,
+        achievements: mockAchievements,
+        mutualGroups: mockMutualGroups,
+      });
+      expect(result.current.isLoadingViewedUser).toBe(false);
+    });
+
+    it('should set loading state during fetch', async () => {
+      mockUsersApi.getUserProfile.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockPublicProfile), 100))
+      );
+      mockUsersApi.getUserStats.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockUserStats), 100))
+      );
+      mockUsersApi.getWeeklyActivity.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockWeeklyActivity), 100))
+      );
+      mockUsersApi.getAchievements.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockAchievements), 100))
+      );
+      mockUsersApi.getMutualGroups.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockMutualGroups), 100))
+      );
+
+      const { result } = renderHook(() => useUserStore());
+
+      act(() => {
+        result.current.fetchUserProfile('456');
+      });
+
+      expect(result.current.isLoadingViewedUser).toBe(true);
+
+      await waitFor(() => {
+        expect(result.current.isLoadingViewedUser).toBe(false);
+      });
+    });
+
+    it('should handle fetch error', async () => {
+      const error = new Error('User not found');
+      mockUsersApi.getUserProfile.mockRejectedValue(error);
+
+      const { result } = renderHook(() => useUserStore());
+
+      await act(async () => {
+        await result.current.fetchUserProfile('456');
+      });
+
+      await waitFor(() => {
+        expect(result.current.error).toBe('User not found');
+      });
+      expect(result.current.isLoadingViewedUser).toBe(false);
+    });
+  });
+
+  describe('fetchCurrentUserStats', () => {
+    const mockUserStats: UserStats = {
+      friends_count: 124,
+      groups_count: 45,
+      badges_count: 12,
+    };
+
+    it('should fetch current user stats successfully', async () => {
+      mockUsersApi.getUserStats.mockResolvedValue(mockUserStats);
+
+      const { result } = renderHook(() => useUserStore());
+      useUserStore.setState({ currentUser: mockUserProfile });
+
+      let stats: UserStats | null = null;
+      await act(async () => {
+        stats = await result.current.fetchCurrentUserStats();
+      });
+
+      expect(mockUsersApi.getUserStats).toHaveBeenCalledWith('123');
+      expect(stats).toEqual(mockUserStats);
+    });
+
+    it('should throw error when no user is loaded', async () => {
+      const { result } = renderHook(() => useUserStore());
+
+      await expect(
+        act(async () => {
+          await result.current.fetchCurrentUserStats();
+        })
+      ).rejects.toThrow('No user loaded');
+    });
+  });
+
+  describe('fetchCurrentUserWeeklyActivity', () => {
+    const mockWeeklyActivity: WeeklyActivity = {
+      total_steps: 64638,
+      total_distance_meters: 51710,
+      average_steps_per_day: 9234,
+      current_streak: 12,
+    };
+
+    it('should fetch current user weekly activity successfully', async () => {
+      mockUsersApi.getWeeklyActivity.mockResolvedValue(mockWeeklyActivity);
+
+      const { result } = renderHook(() => useUserStore());
+      useUserStore.setState({ currentUser: mockUserProfile });
+
+      let activity: WeeklyActivity | null = null;
+      await act(async () => {
+        activity = await result.current.fetchCurrentUserWeeklyActivity();
+      });
+
+      expect(mockUsersApi.getWeeklyActivity).toHaveBeenCalledWith('123');
+      expect(activity).toEqual(mockWeeklyActivity);
+    });
+
+    it('should throw error when no user is loaded', async () => {
+      const { result } = renderHook(() => useUserStore());
+
+      await expect(
+        act(async () => {
+          await result.current.fetchCurrentUserWeeklyActivity();
+        })
+      ).rejects.toThrow('No user loaded');
+    });
+  });
+
+  describe('fetchCurrentUserAchievements', () => {
+    const mockAchievements: Achievement[] = [
+      {
+        id: 'ach-1',
+        name: '100K Club',
+        description: 'Walk 100,000 steps in a week',
+        icon: 'trophy',
+        earned_at: '2025-01-10T08:00:00Z',
+      },
+      {
+        id: 'ach-2',
+        name: '7-Day Warrior',
+        description: 'Complete 7 consecutive days',
+        icon: 'fire',
+        earned_at: '2025-01-05T12:00:00Z',
+      },
+    ];
+
+    it('should fetch current user achievements successfully', async () => {
+      mockUsersApi.getAchievements.mockResolvedValue(mockAchievements);
+
+      const { result } = renderHook(() => useUserStore());
+      useUserStore.setState({ currentUser: mockUserProfile });
+
+      let achievements: Achievement[] = [];
+      await act(async () => {
+        achievements = await result.current.fetchCurrentUserAchievements();
+      });
+
+      expect(mockUsersApi.getAchievements).toHaveBeenCalledWith('123');
+      expect(achievements).toEqual(mockAchievements);
+    });
+
+    it('should throw error when no user is loaded', async () => {
+      const { result } = renderHook(() => useUserStore());
+
+      await expect(
+        act(async () => {
+          await result.current.fetchCurrentUserAchievements();
+        })
+      ).rejects.toThrow('No user loaded');
+    });
+  });
+
+  describe('clearViewedUser', () => {
+    it('should clear viewed user state', () => {
+      const { result } = renderHook(() => useUserStore());
+
+      const mockViewedUser: ViewedUserState = {
+        profile: {
+          id: '456',
+          display_name: 'Other User',
+          created_at: '2024-01-01T00:00:00Z',
+          is_private: false,
+        },
+        stats: { friends_count: 10, groups_count: 5, badges_count: 3 },
+        weeklyActivity: null,
+        achievements: [],
+        mutualGroups: [],
+      };
+
+      act(() => {
+        useUserStore.setState({
+          viewedUser: mockViewedUser,
+          isLoadingViewedUser: true,
+        });
+      });
+
+      expect(result.current.viewedUser).not.toBeNull();
+      expect(result.current.isLoadingViewedUser).toBe(true);
+
+      act(() => {
+        result.current.clearViewedUser();
+      });
+
+      expect(result.current.viewedUser).toBeNull();
+      expect(result.current.isLoadingViewedUser).toBe(false);
+    });
+
+    it('should not affect current user state', () => {
+      const { result } = renderHook(() => useUserStore());
+
+      const mockViewedUser: ViewedUserState = {
+        profile: {
+          id: '456',
+          display_name: 'Other User',
+          created_at: '2024-01-01T00:00:00Z',
+          is_private: false,
+        },
+        stats: null,
+        weeklyActivity: null,
+        achievements: [],
+        mutualGroups: [],
+      };
+
+      act(() => {
+        useUserStore.setState({
+          currentUser: mockUserProfile,
+          viewedUser: mockViewedUser,
+        });
+      });
+
+      act(() => {
+        result.current.clearViewedUser();
+      });
+
+      expect(result.current.viewedUser).toBeNull();
+      expect(result.current.currentUser).toEqual(mockUserProfile);
     });
   });
 });
