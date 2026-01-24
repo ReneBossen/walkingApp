@@ -1,11 +1,20 @@
 import { create } from 'zustand';
-import { usersApi, UserProfileData } from '@services/api/usersApi';
+import {
+  usersApi,
+  UserProfileData,
+  PublicUserProfile,
+  UserStats,
+  WeeklyActivity,
+  Achievement,
+  MutualGroup,
+} from '@services/api/usersApi';
 import { userPreferencesApi, UserPreferences, UserPreferencesUpdate, DEFAULT_PREFERENCES } from '@services/api/userPreferencesApi';
 import { getErrorMessage } from '@utils/errorUtils';
 
 // Re-export types for consumers
 export type { UserPreferences, UserPreferencesUpdate } from '@services/api/userPreferencesApi';
 export type { PrivacyLevel } from '@services/api/userPreferencesApi';
+export type { PublicUserProfile, UserStats, WeeklyActivity, Achievement, MutualGroup } from '@services/api/usersApi';
 
 /**
  * Combined user profile with preferences.
@@ -22,10 +31,23 @@ export interface UserProfile extends UserProfileData {
  */
 export type ThemePreference = 'light' | 'dark' | 'system';
 
+/**
+ * State for viewing another user's profile.
+ */
+export interface ViewedUserState {
+  profile: PublicUserProfile | null;
+  stats: UserStats | null;
+  weeklyActivity: WeeklyActivity | null;
+  achievements: Achievement[];
+  mutualGroups: MutualGroup[];
+}
+
 interface UserState {
   currentUser: UserProfile | null;
+  viewedUser: ViewedUserState | null;
   themePreference: ThemePreference;
   isLoading: boolean;
+  isLoadingViewedUser: boolean;
   error: string | null;
 
   // Actions
@@ -35,12 +57,21 @@ interface UserState {
   setThemePreference: (theme: ThemePreference) => void;
   uploadAvatar: (uri: string) => Promise<string>;
   clearUser: () => void;
+
+  // Viewed user actions
+  fetchUserProfile: (userId: string) => Promise<void>;
+  fetchCurrentUserStats: () => Promise<UserStats>;
+  fetchCurrentUserWeeklyActivity: () => Promise<WeeklyActivity>;
+  fetchCurrentUserAchievements: () => Promise<Achievement[]>;
+  clearViewedUser: () => void;
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
   currentUser: null,
+  viewedUser: null,
   themePreference: 'system',
   isLoading: false,
+  isLoadingViewedUser: false,
   error: null,
 
   fetchCurrentUser: async () => {
@@ -136,6 +167,77 @@ export const useUserStore = create<UserState>((set, get) => ({
    * Resets currentUser to null, themePreference to 'system', isLoading to false, and error to null.
    */
   clearUser: () => {
-    set({ currentUser: null, themePreference: 'system', isLoading: false, error: null });
+    set({
+      currentUser: null,
+      viewedUser: null,
+      themePreference: 'system',
+      isLoading: false,
+      isLoadingViewedUser: false,
+      error: null,
+    });
+  },
+
+  /**
+   * Fetches another user's full profile including stats, activity, achievements, and mutual groups.
+   */
+  fetchUserProfile: async (userId: string) => {
+    set({ isLoadingViewedUser: true, error: null });
+    try {
+      // Fetch all data in parallel
+      const [profile, stats, weeklyActivity, achievements, mutualGroups] = await Promise.all([
+        usersApi.getUserProfile(userId),
+        usersApi.getUserStats(userId),
+        usersApi.getWeeklyActivity(userId),
+        usersApi.getAchievements(userId),
+        usersApi.getMutualGroups(userId),
+      ]);
+
+      set({
+        viewedUser: {
+          profile,
+          stats,
+          weeklyActivity,
+          achievements,
+          mutualGroups,
+        },
+        isLoadingViewedUser: false,
+      });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error), isLoadingViewedUser: false });
+    }
+  },
+
+  /**
+   * Fetches stats for the current user's own profile.
+   */
+  fetchCurrentUserStats: async (): Promise<UserStats> => {
+    const current = get().currentUser;
+    if (!current) throw new Error('No user loaded');
+    return usersApi.getUserStats(current.id);
+  },
+
+  /**
+   * Fetches weekly activity for the current user's own profile.
+   */
+  fetchCurrentUserWeeklyActivity: async (): Promise<WeeklyActivity> => {
+    const current = get().currentUser;
+    if (!current) throw new Error('No user loaded');
+    return usersApi.getWeeklyActivity(current.id);
+  },
+
+  /**
+   * Fetches achievements for the current user's own profile.
+   */
+  fetchCurrentUserAchievements: async (): Promise<Achievement[]> => {
+    const current = get().currentUser;
+    if (!current) throw new Error('No user loaded');
+    return usersApi.getAchievements(current.id);
+  },
+
+  /**
+   * Clears the viewed user state.
+   */
+  clearViewedUser: () => {
+    set({ viewedUser: null, isLoadingViewedUser: false });
   },
 }));

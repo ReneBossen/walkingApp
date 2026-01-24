@@ -11,3 +11,11 @@ export { activityApi } from './activityApi';
 export type { ActivityItem, ActivityFeedResponse } from './activityApi';
 export type { UserPreferences, UserPreferencesUpdate, PrivacyLevel } from './userPreferencesApi';
 export { DEFAULT_PREFERENCES } from './userPreferencesApi';
+export type {
+  UserProfileData,
+  PublicUserProfile,
+  UserStats,
+  WeeklyActivity,
+  Achievement,
+  MutualGroup,
+} from './usersApi';

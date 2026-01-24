@@ -39,7 +39,7 @@ export default function FriendsStackNavigator() {
       <Stack.Screen
         name="UserProfile"
         component={UserProfileScreen}
-        options={{ title: 'User Profile' }}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
