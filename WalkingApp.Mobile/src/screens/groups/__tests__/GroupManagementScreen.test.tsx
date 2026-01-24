@@ -141,6 +141,14 @@ jest.mock('react-native-paper', () => {
     HelperText: ({ children, type, visible }: any) => (
       visible ? <RN.Text testID={`helper-${type}`}>{children}</RN.Text> : null
     ),
+    Snackbar: ({ children, visible, onDismiss, testID }: any) => {
+      if (!visible) return null;
+      return (
+        <RN.View testID={testID}>
+          <RN.Text>{children}</RN.Text>
+        </RN.View>
+      );
+    },
     useTheme: () => ({
       colors: {
         primary: '#4CAF50',
@@ -436,18 +444,20 @@ describe('GroupManagementScreen', () => {
   });
 
   describe('invite code display and copy', () => {
-    it('should show alert when copy button is pressed', () => {
-      const { getByTestId } = render(
+    it('should copy to clipboard and show snackbar when copy button is pressed', async () => {
+      const Clipboard = require('expo-clipboard');
+      const { getByTestId, queryByTestId } = render(
         <GroupManagementScreen route={mockRoute as any} navigation={mockNavigation as any} />
       );
 
       fireEvent.press(getByTestId('copy-invite-code-button'));
 
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Invite Code',
-        'ABC123XYZ',
-        [{ text: 'OK' }]
-      );
+      await waitFor(() => {
+        expect(Clipboard.setStringAsync).toHaveBeenCalledWith('ABC123XYZ');
+      });
+
+      // Snackbar should now be visible
+      expect(queryByTestId('copy-success-snackbar')).toBeTruthy();
     });
 
     it('should display no code message when code is null', () => {

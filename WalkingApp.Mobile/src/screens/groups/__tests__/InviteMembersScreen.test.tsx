@@ -39,6 +39,20 @@ jest.mock('@components/common/LoadingSpinner', () => ({
   },
 }));
 
+jest.mock('@components/common/ErrorMessage', () => ({
+  ErrorMessage: ({ message, onRetry }: { message: string; onRetry: () => void }) => {
+    const RN = require('react-native');
+    return (
+      <RN.View testID="error-message">
+        <RN.Text>{message}</RN.Text>
+        <RN.TouchableOpacity testID="retry-button" onPress={onRetry}>
+          <RN.Text>Retry</RN.Text>
+        </RN.TouchableOpacity>
+      </RN.View>
+    );
+  },
+}));
+
 // Mock react-native-paper
 jest.mock('react-native-paper', () => {
   const RN = require('react-native');
@@ -102,6 +116,14 @@ jest.mock('react-native-paper', () => {
     ActivityIndicator: ({ size }: any) => (
       <RN.View testID="activity-indicator" />
     ),
+    Snackbar: ({ children, visible, onDismiss, testID }: any) => {
+      if (!visible) return null;
+      return (
+        <RN.View testID={testID}>
+          <RN.Text>{children}</RN.Text>
+        </RN.View>
+      );
+    },
     useTheme: () => ({
       colors: {
         primary: '#4CAF50',
@@ -167,6 +189,7 @@ describe('InviteMembersScreen', () => {
     inviteCode: 'ABC123XYZ',
     members: defaultMembers,
     isLoadingManagement: false,
+    managementError: null as string | null,
     fetchInviteCode: mockFetchInviteCode,
     generateInviteCode: mockGenerateInviteCode,
     fetchMembers: mockFetchMembers,
