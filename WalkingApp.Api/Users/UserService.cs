@@ -421,4 +421,133 @@ public class UserService : IUserService
             OnboardingCompleted = user.OnboardingCompleted
         };
     }
+
+    /// <inheritdoc />
+    public async Task<UserStatsResponse> GetUserStatsAsync(Guid userId)
+    {
+        ValidateUserId(userId);
+
+        var friendsCount = await _userRepository.GetFriendsCountAsync(userId);
+        var groupsCount = await _userRepository.GetGroupsCountAsync(userId);
+
+        return new UserStatsResponse
+        {
+            FriendsCount = friendsCount,
+            GroupsCount = groupsCount,
+            BadgesCount = 0 // Badges not implemented yet
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<UserActivityResponse> GetUserActivityAsync(Guid userId)
+    {
+        ValidateUserId(userId);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var weekAgo = today.AddDays(-6); // Last 7 days including today
+
+        var stepEntries = await _userRepository.GetStepEntriesForRangeAsync(userId, weekAgo, today);
+
+        var totalSteps = CalculateTotalSteps(stepEntries);
+        var totalDistance = CalculateTotalDistance(stepEntries);
+        var averageSteps = CalculateAverageSteps(totalSteps);
+        var currentStreak = await CalculateCurrentStreakAsync(userId);
+
+        return new UserActivityResponse
+        {
+            TotalSteps = totalSteps,
+            TotalDistanceMeters = totalDistance,
+            AverageStepsPerDay = averageSteps,
+            CurrentStreak = currentStreak
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<List<MutualGroupResponse>> GetMutualGroupsAsync(Guid currentUserId, Guid otherUserId)
+    {
+        ValidateUserId(currentUserId);
+        ValidateOtherUserId(otherUserId);
+
+        var currentUserGroups = await _userRepository.GetUserGroupIdsAsync(currentUserId);
+        var otherUserGroups = await _userRepository.GetUserGroupIdsAsync(otherUserId);
+
+        var mutualGroupIds = currentUserGroups.Intersect(otherUserGroups).ToList();
+
+        if (mutualGroupIds.Count == 0)
+        {
+            return new List<MutualGroupResponse>();
+        }
+
+        var groups = await _userRepository.GetGroupsByIdsAsync(mutualGroupIds);
+
+        return groups.Select(g => new MutualGroupResponse
+        {
+            Id = g.Id,
+            Name = g.Name
+        }).ToList();
+    }
+
+    private static void ValidateOtherUserId(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            throw new ArgumentException("Other user ID cannot be empty.", nameof(userId));
+        }
+    }
+
+    private static int CalculateTotalSteps(List<(int StepCount, double? DistanceMeters, DateOnly Date)> entries)
+    {
+        return entries.Sum(e => e.StepCount);
+    }
+
+    private static double CalculateTotalDistance(List<(int StepCount, double? DistanceMeters, DateOnly Date)> entries)
+    {
+        return entries.Sum(e => e.DistanceMeters ?? 0);
+    }
+
+    private static int CalculateAverageSteps(int totalSteps)
+    {
+        const int daysInWeek = 7;
+        return totalSteps / daysInWeek;
+    }
+
+    private async Task<int> CalculateCurrentStreakAsync(Guid userId)
+    {
+        var activityDates = await _userRepository.GetActivityDatesAsync(userId);
+
+        if (activityDates.Count == 0)
+        {
+            return 0;
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var yesterday = today.AddDays(-1);
+        var streak = 0;
+
+        // Check if the streak starts from today or yesterday
+        var expectedDate = activityDates[0] == today ? today : yesterday;
+
+        // If the most recent activity is neither today nor yesterday, streak is broken
+        if (activityDates[0] != today && activityDates[0] != yesterday)
+        {
+            return 0;
+        }
+
+        foreach (var date in activityDates)
+        {
+            if (date == expectedDate)
+            {
+                streak++;
+                expectedDate = expectedDate.AddDays(-1);
+            }
+            else if (date < expectedDate)
+            {
+                // Gap found, streak ends
+                break;
+            }
+            // If date > expectedDate, skip duplicate dates (already counted)
+        }
+
+        return streak;
+    }
 }
