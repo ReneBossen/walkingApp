@@ -1,4 +1,5 @@
 using Supabase;
+using WalkingApp.Api.Common.Constants;
 using WalkingApp.Api.Common.Database;
 
 namespace WalkingApp.Api.Friends;
@@ -32,7 +33,7 @@ public class FriendRepository : IFriendRepository
             Id = Guid.NewGuid(),
             RequesterId = requesterId,
             AddresseeId = addresseeId,
-            Status = "pending",
+            Status = FriendshipStatusStrings.Pending,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -56,7 +57,7 @@ public class FriendRepository : IFriendRepository
 
         var response = await client
             .From<FriendshipEntity>()
-            .Where(x => x.AddresseeId == userId && x.Status == "pending")
+            .Where(x => x.AddresseeId == userId && x.Status == FriendshipStatusStrings.Pending)
             .Get();
 
         return response.Models.Select(e => e.ToFriendship()).ToList();
@@ -69,7 +70,7 @@ public class FriendRepository : IFriendRepository
 
         var response = await client
             .From<FriendshipEntity>()
-            .Where(x => x.RequesterId == userId && x.Status == "pending")
+            .Where(x => x.RequesterId == userId && x.Status == FriendshipStatusStrings.Pending)
             .Get();
 
         return response.Models.Select(e => e.ToFriendship()).ToList();
@@ -96,12 +97,12 @@ public class FriendRepository : IFriendRepository
             throw new UnauthorizedAccessException("Only the addressee can accept this request.");
         }
 
-        if (existing.Status != "pending")
+        if (existing.Status != FriendshipStatusStrings.Pending)
         {
             throw new InvalidOperationException($"Cannot accept request with status: {existing.Status}");
         }
 
-        existing.Status = "accepted";
+        existing.Status = FriendshipStatusStrings.Accepted;
         existing.AcceptedAt = DateTime.UtcNow;
 
         var response = await client
@@ -138,12 +139,12 @@ public class FriendRepository : IFriendRepository
             throw new UnauthorizedAccessException("Only the addressee can reject this request.");
         }
 
-        if (existing.Status != "pending")
+        if (existing.Status != FriendshipStatusStrings.Pending)
         {
             throw new InvalidOperationException($"Cannot reject request with status: {existing.Status}");
         }
 
-        existing.Status = "rejected";
+        existing.Status = FriendshipStatusStrings.Rejected;
 
         var response = await client
             .From<FriendshipEntity>()
@@ -166,13 +167,13 @@ public class FriendRepository : IFriendRepository
         // Get friendships where user is requester
         var asRequester = await client
             .From<FriendshipEntity>()
-            .Where(x => x.RequesterId == userId && x.Status == "accepted")
+            .Where(x => x.RequesterId == userId && x.Status == FriendshipStatusStrings.Accepted)
             .Get();
 
         // Get friendships where user is addressee
         var asAddressee = await client
             .From<FriendshipEntity>()
-            .Where(x => x.AddresseeId == userId && x.Status == "accepted")
+            .Where(x => x.AddresseeId == userId && x.Status == FriendshipStatusStrings.Accepted)
             .Get();
 
         var allFriendships = asRequester.Models
@@ -248,7 +249,7 @@ public class FriendRepository : IFriendRepository
             throw new UnauthorizedAccessException("Only the requester can cancel this request.");
         }
 
-        if (existing.Status != "pending")
+        if (existing.Status != FriendshipStatusStrings.Pending)
         {
             throw new InvalidOperationException($"Cannot cancel request with status: {existing.Status}");
         }
