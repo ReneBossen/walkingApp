@@ -21,6 +21,16 @@ jest.mock('../authApi', () => ({
   },
 }));
 
+// Mock the auth store
+const mockSetUser = jest.fn();
+jest.mock('../../../store/authStore', () => ({
+  useAuthStore: {
+    getState: () => ({
+      setUser: mockSetUser,
+    }),
+  },
+}));
+
 // Mock the API config
 jest.mock('@config/api', () => ({
   API_CONFIG: {
@@ -50,6 +60,7 @@ describe('apiClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    mockSetUser.mockClear();
 
     // Create a mock fetch function
     mockFetch = jest.fn();
@@ -180,7 +191,7 @@ describe('apiClient', () => {
       expect(headers['Authorization']).toBeUndefined();
     });
 
-    it('should not attempt refresh for expired OAuth tokens', async () => {
+    it('should clear tokens and notify auth store for expired OAuth tokens', async () => {
       mockGetAccessToken.mockResolvedValue('old-oauth-token');
       mockIsAccessTokenExpired.mockResolvedValue(true);
       mockGetTokenType.mockResolvedValue('oauth');
@@ -194,10 +205,12 @@ describe('apiClient', () => {
 
       await apiClient.get('/public/endpoint');
 
-      // Should NOT attempt to refresh OAuth tokens
+      // Should NOT attempt to refresh OAuth tokens via backend
       expect(mockRefreshToken).not.toHaveBeenCalled();
-      // Should NOT clear tokens (let restoreSession handle it)
-      expect(mockClearTokens).not.toHaveBeenCalled();
+      // Should clear tokens when OAuth token is expired
+      expect(mockClearTokens).toHaveBeenCalled();
+      // Should notify auth store that user is logged out
+      expect(mockSetUser).toHaveBeenCalledWith(null);
       // Request should proceed without Authorization header
       const callArgs = mockFetch.mock.calls[0];
       const headers = callArgs[1].headers;
