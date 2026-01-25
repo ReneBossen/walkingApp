@@ -229,63 +229,6 @@ public class FriendRepository : IFriendRepository
     }
 
     /// <inheritdoc />
-    public async Task<Friendship> BlockUserAsync(Guid userId, Guid blockedUserId)
-    {
-        var client = await GetAuthenticatedClientAsync();
-
-        // Check if friendship already exists
-        var existing = await GetFriendshipAsync(userId, blockedUserId);
-
-        if (existing != null)
-        {
-            // Update existing friendship to blocked
-            var entity = await client
-                .From<FriendshipEntity>()
-                .Where(x => x.Id == existing.Id)
-                .Single();
-
-            if (entity != null)
-            {
-                entity.Status = "blocked";
-
-                var response = await client
-                    .From<FriendshipEntity>()
-                    .Update(entity);
-
-                var updated = response.Models.FirstOrDefault();
-                if (updated == null)
-                {
-                    throw new InvalidOperationException("Failed to block user.");
-                }
-
-                return updated.ToFriendship();
-            }
-        }
-
-        // Create new blocked relationship
-        var newEntity = new FriendshipEntity
-        {
-            Id = Guid.NewGuid(),
-            RequesterId = userId,
-            AddresseeId = blockedUserId,
-            Status = "blocked",
-            CreatedAt = DateTime.UtcNow
-        };
-
-        var createResponse = await client
-            .From<FriendshipEntity>()
-            .Insert(newEntity);
-
-        var created = createResponse.Models.FirstOrDefault();
-        if (created == null)
-        {
-            throw new InvalidOperationException("Failed to block user.");
-        }
-
-        return created.ToFriendship();
-    }
-
-    /// <inheritdoc />
     public async Task CancelRequestAsync(Guid requestId, Guid userId)
     {
         var client = await GetAuthenticatedClientAsync();
