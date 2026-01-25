@@ -7,23 +7,31 @@ import {
   Achievement,
   MutualGroup,
 } from '../usersApi';
+import { apiClient } from '../client';
 import { supabase } from '@services/supabase';
 
-// Mock the supabase client
+// Mock the apiClient
+jest.mock('../client', () => ({
+  apiClient: {
+    get: jest.fn(),
+    put: jest.fn(),
+    upload: jest.fn(),
+  },
+}));
+
+// Mock the supabase client for methods that still use it
 const mockGetUser = jest.fn();
 
 jest.mock('@services/supabase', () => ({
   supabase: {
     from: jest.fn(),
-    storage: {
-      from: jest.fn(),
-    },
     auth: {
       getUser: () => mockGetUser(),
     },
   },
 }));
 
+const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
 const mockSupabase = supabase as jest.Mocked<typeof supabase>;
 
 describe('usersApi', () => {
@@ -36,9 +44,18 @@ describe('usersApi', () => {
     created_at: '2024-01-01T00:00:00Z',
   };
 
+  // Backend response format (camelCase)
+  const mockBackendProfile = {
+    id: '123',
+    displayName: 'Test User',
+    avatarUrl: 'https://example.com/avatar.jpg',
+    onboardingCompleted: true,
+    createdAt: '2024-01-01T00:00:00Z',
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default mock for authenticated user
+    // Default mock for authenticated user (for Supabase methods)
     mockGetUser.mockResolvedValue({
       data: { user: { id: '123' } },
       error: null,
@@ -46,271 +63,147 @@ describe('usersApi', () => {
   });
 
   describe('getCurrentUser', () => {
-    it('should fetch current user successfully', async () => {
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockEq = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: mockUserProfile,
-        error: null,
-      });
+    it('should fetch current user successfully via backend API', async () => {
+      mockApiClient.get.mockResolvedValue(mockBackendProfile);
 
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        select: mockSelect,
-      });
+      const result = await usersApi.getCurrentUser();
 
-      mockSelect.mockReturnValue({
-        eq: mockEq,
-      });
+      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/me');
+      expect(result).toEqual(mockUserProfile);
+    });
 
-      mockEq.mockReturnValue({
-        single: mockSingle,
+    it('should map camelCase response to snake_case', async () => {
+      mockApiClient.get.mockResolvedValue({
+        id: '456',
+        displayName: 'Another User',
+        avatarUrl: 'https://example.com/other.jpg',
+        onboardingCompleted: false,
+        createdAt: '2024-02-15T10:30:00Z',
       });
 
       const result = await usersApi.getCurrentUser();
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('users');
-      expect(mockSelect).toHaveBeenCalledWith('id, display_name, avatar_url, created_at, onboarding_completed');
-      expect(mockEq).toHaveBeenCalledWith('id', '123');
-      expect(mockSingle).toHaveBeenCalled();
-      expect(result).toEqual(mockUserProfile);
+      expect(result).toEqual({
+        id: '456',
+        display_name: 'Another User',
+        avatar_url: 'https://example.com/other.jpg',
+        onboarding_completed: false,
+        created_at: '2024-02-15T10:30:00Z',
+      });
     });
 
-    it('should throw error when user fetch fails', async () => {
-      const mockError = { message: 'User not found' };
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockEq = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: null,
-        error: mockError,
-      });
-
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        select: mockSelect,
-      });
-
-      mockSelect.mockReturnValue({
-        eq: mockEq,
-      });
-
-      mockEq.mockReturnValue({
-        single: mockSingle,
-      });
-
-      await expect(usersApi.getCurrentUser()).rejects.toEqual(mockError);
-    });
-
-    it('should handle network errors', async () => {
-      const networkError = new Error('Network error');
-      const mockSelect = jest.fn().mockImplementation(() => {
-        throw networkError;
-      });
-
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        select: mockSelect,
-      });
+    it('should throw error when API call fails', async () => {
+      const apiError = new Error('Network error');
+      mockApiClient.get.mockRejectedValue(apiError);
 
       await expect(usersApi.getCurrentUser()).rejects.toThrow('Network error');
+    });
+
+    it('should handle missing avatar_url', async () => {
+      mockApiClient.get.mockResolvedValue({
+        id: '123',
+        displayName: 'Test User',
+        avatarUrl: undefined,
+        onboardingCompleted: true,
+        createdAt: '2024-01-01T00:00:00Z',
+      });
+
+      const result = await usersApi.getCurrentUser();
+
+      expect(result.avatar_url).toBeUndefined();
     });
   });
 
   describe('updateProfile', () => {
-    it('should update profile successfully', async () => {
+    it('should update profile successfully via backend API', async () => {
       const updates = { display_name: 'Updated Name' };
-      const updatedProfile = { ...mockUserProfile, ...updates };
+      const updatedBackendProfile = { ...mockBackendProfile, displayName: 'Updated Name' };
 
-      const mockUpdate = jest.fn().mockReturnThis();
-      const mockEq = jest.fn().mockReturnThis();
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: updatedProfile,
-        error: null,
-      });
-
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        update: mockUpdate,
-      });
-
-      mockUpdate.mockReturnValue({
-        eq: mockEq,
-      });
-
-      mockEq.mockReturnValue({
-        select: mockSelect,
-      });
-
-      mockSelect.mockReturnValue({
-        single: mockSingle,
-      });
+      mockApiClient.put.mockResolvedValue(updatedBackendProfile);
 
       const result = await usersApi.updateProfile(updates);
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('users');
-      expect(mockUpdate).toHaveBeenCalledWith(updates);
-      expect(mockEq).toHaveBeenCalledWith('id', '123');
-      expect(mockSelect).toHaveBeenCalled();
-      expect(mockSingle).toHaveBeenCalled();
-      expect(result).toEqual(updatedProfile);
+      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me', { displayName: 'Updated Name' });
+      expect(result.display_name).toBe('Updated Name');
+    });
+
+    it('should map snake_case updates to camelCase request', async () => {
+      const updates = {
+        display_name: 'New Name',
+        avatar_url: 'https://new-avatar.jpg',
+        onboarding_completed: true,
+      };
+
+      mockApiClient.put.mockResolvedValue({
+        id: '123',
+        displayName: 'New Name',
+        avatarUrl: 'https://new-avatar.jpg',
+        onboardingCompleted: true,
+        createdAt: '2024-01-01T00:00:00Z',
+      });
+
+      await usersApi.updateProfile(updates);
+
+      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me', {
+        displayName: 'New Name',
+        avatarUrl: 'https://new-avatar.jpg',
+        onboardingCompleted: true,
+      });
     });
 
     it('should handle partial updates', async () => {
       const updates = { display_name: 'New Name Only' };
-      const updatedProfile = { ...mockUserProfile, display_name: 'New Name Only' };
 
-      const mockUpdate = jest.fn().mockReturnThis();
-      const mockEq = jest.fn().mockReturnThis();
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: updatedProfile,
-        error: null,
-      });
-
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        update: mockUpdate,
-      });
-
-      mockUpdate.mockReturnValue({
-        eq: mockEq,
-      });
-
-      mockEq.mockReturnValue({
-        select: mockSelect,
-      });
-
-      mockSelect.mockReturnValue({
-        single: mockSingle,
+      mockApiClient.put.mockResolvedValue({
+        ...mockBackendProfile,
+        displayName: 'New Name Only',
       });
 
       const result = await usersApi.updateProfile(updates);
 
-      expect(mockUpdate).toHaveBeenCalledWith(updates);
+      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me', { displayName: 'New Name Only' });
       expect(result.display_name).toBe('New Name Only');
     });
 
     it('should throw error when update fails', async () => {
-      const mockError = { message: 'Update failed' };
-      const mockUpdate = jest.fn().mockReturnThis();
-      const mockEq = jest.fn().mockReturnThis();
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: null,
-        error: mockError,
-      });
+      const apiError = new Error('Update failed');
+      mockApiClient.put.mockRejectedValue(apiError);
 
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        update: mockUpdate,
-      });
-
-      mockUpdate.mockReturnValue({
-        eq: mockEq,
-      });
-
-      mockEq.mockReturnValue({
-        select: mockSelect,
-      });
-
-      mockSelect.mockReturnValue({
-        single: mockSingle,
-      });
-
-      await expect(usersApi.updateProfile({ display_name: 'Test' })).rejects.toEqual(mockError);
+      await expect(usersApi.updateProfile({ display_name: 'Test' })).rejects.toThrow('Update failed');
     });
   });
 
-  // Note: updatePreferences tests have been moved to userPreferencesApi.test.ts
-  // since preferences are now stored in the user_preferences table
-
   describe('uploadAvatar', () => {
-    it('should upload avatar successfully', async () => {
+    it('should upload avatar successfully via backend API', async () => {
       const avatarUri = 'file://path/to/avatar.jpg';
-      const uploadedPath = '123/avatar-123456.jpg';
-      const publicUrl = 'https://storage.example.com/avatars/123/avatar-123456.jpg';
+      const publicUrl = 'https://storage.example.com/avatars/123/avatar.jpg';
 
-      // Mock fetch
-      global.fetch = jest.fn().mockResolvedValue({
-        blob: jest.fn().mockResolvedValue(new Blob()),
-      }) as any;
-
-      const mockUpload = jest.fn().mockResolvedValue({
-        data: { path: uploadedPath },
-        error: null,
-      });
-
-      const mockGetPublicUrl = jest.fn().mockReturnValue({
-        data: { publicUrl },
-      });
-
-      const mockStorage = {
-        upload: mockUpload,
-        getPublicUrl: mockGetPublicUrl,
-      };
-
-      (mockSupabase.storage.from as jest.Mock).mockReturnValue(mockStorage);
+      mockApiClient.upload.mockResolvedValue({ avatarUrl: publicUrl });
 
       const result = await usersApi.uploadAvatar(avatarUri);
 
-      expect(global.fetch).toHaveBeenCalledWith(avatarUri);
-      expect(mockSupabase.storage.from).toHaveBeenCalledWith('avatars');
-      expect(mockUpload).toHaveBeenCalled();
-      expect(mockGetPublicUrl).toHaveBeenCalledWith(uploadedPath);
+      expect(mockApiClient.upload).toHaveBeenCalledWith(
+        '/api/v1/users/me/avatar',
+        expect.any(FormData)
+      );
       expect(result).toBe(publicUrl);
     });
 
     it('should throw error when upload fails', async () => {
-      const mockError = { message: 'Upload failed' };
+      const apiError = new Error('Upload failed');
+      mockApiClient.upload.mockRejectedValue(apiError);
 
-      global.fetch = jest.fn().mockResolvedValue({
-        blob: jest.fn().mockResolvedValue(new Blob()),
-      }) as any;
-
-      const mockUpload = jest.fn().mockResolvedValue({
-        data: null,
-        error: mockError,
-      });
-
-      (mockSupabase.storage.from as jest.Mock).mockReturnValue({
-        upload: mockUpload,
-      });
-
-      await expect(usersApi.uploadAvatar('file://avatar.jpg')).rejects.toEqual(mockError);
+      await expect(usersApi.uploadAvatar('file://avatar.jpg')).rejects.toThrow('Upload failed');
     });
 
-    it('should handle fetch error', async () => {
-      const fetchError = new Error('Failed to fetch file');
-      global.fetch = jest.fn().mockRejectedValue(fetchError) as any;
+    it('should handle different file extensions', async () => {
+      mockApiClient.upload.mockResolvedValue({ avatarUrl: 'https://example.com/avatar.png' });
 
-      await expect(usersApi.uploadAvatar('file://avatar.jpg')).rejects.toThrow('Failed to fetch file');
-    });
+      await usersApi.uploadAvatar('file://path/to/avatar.png');
 
-    it('should generate unique filename with user folder', async () => {
-      const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(1234567890);
-
-      global.fetch = jest.fn().mockResolvedValue({
-        blob: jest.fn().mockResolvedValue(new Blob()),
-      }) as any;
-
-      const mockUpload = jest.fn().mockResolvedValue({
-        data: { path: '123/avatar-1234567890.jpg' },
-        error: null,
-      });
-
-      const mockGetPublicUrl = jest.fn().mockReturnValue({
-        data: { publicUrl: 'https://example.com/avatar.jpg' },
-      });
-
-      (mockSupabase.storage.from as jest.Mock).mockReturnValue({
-        upload: mockUpload,
-        getPublicUrl: mockGetPublicUrl,
-      });
-
-      await usersApi.uploadAvatar('file://avatar.jpg');
-
-      expect(mockUpload).toHaveBeenCalledWith(
-        '123/avatar-1234567890.jpg',
-        expect.any(Blob),
-        { upsert: true, contentType: 'image/jpeg' }
-      );
-
-      dateSpy.mockRestore();
+      expect(mockApiClient.upload).toHaveBeenCalled();
+      const formData = mockApiClient.upload.mock.calls[0][1];
+      expect(formData).toBeInstanceOf(FormData);
     });
   });
 
@@ -322,7 +215,7 @@ describe('usersApi', () => {
       created_at: '2024-12-10T08:00:00Z',
     };
 
-    it('should fetch user profile successfully', async () => {
+    it('should fetch user profile successfully (still uses Supabase)', async () => {
       const mockSelect = jest.fn().mockReturnThis();
       const mockEq = jest.fn().mockReturnThis();
       const mockSingle = jest.fn().mockResolvedValue({
@@ -430,7 +323,7 @@ describe('usersApi', () => {
   });
 
   describe('getUserStats', () => {
-    it('should fetch user stats successfully', async () => {
+    it('should fetch user stats successfully (still uses Supabase)', async () => {
       // Mock friendships count
       (mockSupabase.from as jest.Mock)
         .mockReturnValueOnce({
@@ -477,7 +370,7 @@ describe('usersApi', () => {
   });
 
   describe('getWeeklyActivity', () => {
-    it('should calculate weekly activity correctly', async () => {
+    it('should calculate weekly activity correctly (still uses Supabase)', async () => {
       const mockEntries = [
         { date: '2025-01-24', step_count: 10000, distance_meters: 8000 },
         { date: '2025-01-23', step_count: 8000, distance_meters: 6400 },
@@ -551,7 +444,7 @@ describe('usersApi', () => {
   });
 
   describe('getMutualGroups', () => {
-    it('should fetch mutual groups successfully', async () => {
+    it('should fetch mutual groups successfully (still uses Supabase)', async () => {
       // Mock authenticated user
       mockGetUser.mockResolvedValue({
         data: { user: { id: '123' } },

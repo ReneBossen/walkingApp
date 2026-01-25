@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { apiClient } from './client';
 
 /**
  * Privacy visibility level for user preferences.
@@ -63,59 +63,135 @@ export const DEFAULT_PREFERENCES: Omit<UserPreferences, 'id' | 'created_at' | 'u
   privacy_show_steps: 'partial',
 };
 
+/**
+ * Backend API response shape for user preferences.
+ * Uses camelCase from .NET backend.
+ * Note: Backend has a simplified preferences model compared to mobile.
+ */
+interface BackendPreferencesResponse {
+  notificationsEnabled: boolean;
+  dailyStepGoal: number;
+  distanceUnit: string;
+  privateProfile: boolean;
+}
+
+/**
+ * Maps backend preferences response (camelCase, simplified) to mobile format (snake_case, full).
+ * Provides default values for fields not supported by the backend.
+ */
+function mapPreferencesResponse(backend: BackendPreferencesResponse, userId: string): UserPreferences {
+  const now = new Date().toISOString();
+  return {
+    id: userId,
+    daily_step_goal: backend.dailyStepGoal,
+    units: backend.distanceUnit === 'imperial' ? 'imperial' : 'metric',
+    notifications_enabled: backend.notificationsEnabled,
+    // Granular notification preferences - derive from master toggle
+    notify_friend_requests: backend.notificationsEnabled,
+    notify_friend_accepted: backend.notificationsEnabled,
+    notify_friend_milestones: backend.notificationsEnabled,
+    notify_group_invites: backend.notificationsEnabled,
+    notify_leaderboard_updates: false, // Default to false as per DEFAULT_PREFERENCES
+    notify_competition_reminders: backend.notificationsEnabled,
+    notify_goal_achieved: backend.notificationsEnabled,
+    notify_streak_reminders: backend.notificationsEnabled,
+    notify_weekly_summary: backend.notificationsEnabled,
+    // Privacy settings - derive from privateProfile flag
+    privacy_profile_visibility: backend.privateProfile ? 'private' : 'public',
+    privacy_find_me: backend.privateProfile ? 'private' : 'public',
+    privacy_show_steps: backend.privateProfile ? 'private' : 'partial',
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+/**
+ * Gets the current user ID from the backend profile endpoint.
+ * Used to populate the id field in preferences.
+ */
+async function getCurrentUserId(): Promise<string> {
+  interface ProfileResponse {
+    id: string;
+  }
+  const response = await apiClient.get<ProfileResponse>('/api/v1/users/me');
+  return response.id;
+}
+
 export const userPreferencesApi = {
   /**
-   * Fetches the current user's preferences from the user_preferences table.
-   * If no preferences exist, returns default values.
+   * Fetches the current user's preferences from the backend API.
+   * Maps the backend's simplified preferences model to the mobile's full model.
    */
   async getPreferences(): Promise<UserPreferences> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
+    const [prefsResponse, userId] = await Promise.all([
+      apiClient.get<BackendPreferencesResponse>('/api/v1/users/me/preferences'),
+      getCurrentUserId(),
+    ]);
 
-    const { data, error } = await supabase
-      .from('user_preferences')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (error) {
-      // If no row exists, return defaults with user id
-      if (error.code === 'PGRST116') {
-        return {
-          id: user.id,
-          ...DEFAULT_PREFERENCES,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-      }
-      throw error;
-    }
-
-    return data;
+    return mapPreferencesResponse(prefsResponse, userId);
   },
 
   /**
-   * Updates the current user's preferences in the user_preferences table.
-   * Uses upsert to create the row if it doesn't exist.
+   * Updates the current user's preferences via the backend API.
+   * Maps the mobile's full preferences model to the backend's simplified model.
    */
   async updatePreferences(updates: UserPreferencesUpdate): Promise<UserPreferences> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
+    // Map mobile format (snake_case, granular) to backend format (camelCase, simplified)
+    const requestBody: Record<string, unknown> = {};
 
-    const { data, error } = await supabase
-      .from('user_preferences')
-      .upsert(
-        {
-          id: user.id,
-          ...updates,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'id' }
-      )
-      .select()
-      .single();
+    // Map notifications_enabled to backend
+    if (updates.notifications_enabled !== undefined) {
+      requestBody.notificationsEnabled = updates.notifications_enabled;
+    }
 
-    if (error) throw error;
-    return data;
+    // Map daily_step_goal to backend
+    if (updates.daily_step_goal !== undefined) {
+      requestBody.dailyStepGoal = updates.daily_step_goal;
+    }
+
+    // Map units to backend's distanceUnit
+    if (updates.units !== undefined) {
+      requestBody.distanceUnit = updates.units;
+    }
+
+    // Map privacy settings to backend's privateProfile
+    // If any privacy setting is set to 'private', set privateProfile to true
+    if (updates.privacy_profile_visibility !== undefined ||
+        updates.privacy_find_me !== undefined ||
+        updates.privacy_show_steps !== undefined) {
+      const isPrivate =
+        updates.privacy_profile_visibility === 'private' ||
+        updates.privacy_find_me === 'private' ||
+        updates.privacy_show_steps === 'private';
+      requestBody.privateProfile = isPrivate;
+    }
+
+    const [prefsResponse, userId] = await Promise.all([
+      apiClient.put<BackendPreferencesResponse>('/api/v1/users/me/preferences', requestBody),
+      getCurrentUserId(),
+    ]);
+
+    // Start with mapped backend response
+    const mappedPrefs = mapPreferencesResponse(prefsResponse, userId);
+
+    // Override with specific updates that the backend doesn't store
+    // This preserves granular settings locally even though backend only stores simplified version
+    return {
+      ...mappedPrefs,
+      // Apply granular notification overrides if they were in the update
+      ...(updates.notify_friend_requests !== undefined && { notify_friend_requests: updates.notify_friend_requests }),
+      ...(updates.notify_friend_accepted !== undefined && { notify_friend_accepted: updates.notify_friend_accepted }),
+      ...(updates.notify_friend_milestones !== undefined && { notify_friend_milestones: updates.notify_friend_milestones }),
+      ...(updates.notify_group_invites !== undefined && { notify_group_invites: updates.notify_group_invites }),
+      ...(updates.notify_leaderboard_updates !== undefined && { notify_leaderboard_updates: updates.notify_leaderboard_updates }),
+      ...(updates.notify_competition_reminders !== undefined && { notify_competition_reminders: updates.notify_competition_reminders }),
+      ...(updates.notify_goal_achieved !== undefined && { notify_goal_achieved: updates.notify_goal_achieved }),
+      ...(updates.notify_streak_reminders !== undefined && { notify_streak_reminders: updates.notify_streak_reminders }),
+      ...(updates.notify_weekly_summary !== undefined && { notify_weekly_summary: updates.notify_weekly_summary }),
+      // Apply granular privacy overrides if they were in the update
+      ...(updates.privacy_profile_visibility !== undefined && { privacy_profile_visibility: updates.privacy_profile_visibility }),
+      ...(updates.privacy_find_me !== undefined && { privacy_find_me: updates.privacy_find_me }),
+      ...(updates.privacy_show_steps !== undefined && { privacy_show_steps: updates.privacy_show_steps }),
+    };
   },
 };

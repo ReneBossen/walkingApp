@@ -118,4 +118,118 @@ public class UsersController : ControllerBase
             return StatusCode(500, ApiResponse<GetProfileResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
         }
     }
+
+    /// <summary>
+    /// Gets the authenticated user's preferences.
+    /// </summary>
+    /// <returns>The user's preferences.</returns>
+    [HttpGet("me/preferences")]
+    public async Task<ActionResult<ApiResponse<UserPreferencesResponse>>> GetMyPreferences()
+    {
+        var userId = User.GetUserId();
+
+        if (userId == null)
+        {
+            return Unauthorized(ApiResponse<UserPreferencesResponse>.ErrorResponse("User is not authenticated."));
+        }
+
+        try
+        {
+            var preferences = await _userService.GetPreferencesAsync(userId.Value);
+            return Ok(ApiResponse<UserPreferencesResponse>.SuccessResponse(preferences));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<UserPreferencesResponse>.ErrorResponse(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<UserPreferencesResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Updates the authenticated user's preferences.
+    /// </summary>
+    /// <param name="request">The preferences update request.</param>
+    /// <returns>The updated preferences.</returns>
+    [HttpPut("me/preferences")]
+    public async Task<ActionResult<ApiResponse<UserPreferencesResponse>>> UpdateMyPreferences([FromBody] UpdateUserPreferencesRequest request)
+    {
+        var userId = User.GetUserId();
+
+        if (userId == null)
+        {
+            return Unauthorized(ApiResponse<UserPreferencesResponse>.ErrorResponse("User is not authenticated."));
+        }
+
+        if (request == null)
+        {
+            return BadRequest(ApiResponse<UserPreferencesResponse>.ErrorResponse("Request body cannot be null."));
+        }
+
+        try
+        {
+            var preferences = await _userService.UpdatePreferencesAsync(userId.Value, request);
+            return Ok(ApiResponse<UserPreferencesResponse>.SuccessResponse(preferences));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse<UserPreferencesResponse>.ErrorResponse(ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<UserPreferencesResponse>.ErrorResponse(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<UserPreferencesResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Uploads a new avatar image for the authenticated user.
+    /// </summary>
+    /// <param name="file">The image file to upload.</param>
+    /// <returns>The avatar upload response containing the new URL.</returns>
+    [HttpPost("me/avatar")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ApiResponse<AvatarUploadResponse>>> UploadAvatar(IFormFile file)
+    {
+        var userId = User.GetUserId();
+
+        if (userId == null)
+        {
+            return Unauthorized(ApiResponse<AvatarUploadResponse>.ErrorResponse("User is not authenticated."));
+        }
+
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(ApiResponse<AvatarUploadResponse>.ErrorResponse("No file was provided."));
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream();
+            var response = await _userService.UploadAvatarAsync(
+                userId.Value,
+                stream,
+                file.FileName,
+                file.ContentType);
+
+            return Ok(ApiResponse<AvatarUploadResponse>.SuccessResponse(response));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse<AvatarUploadResponse>.ErrorResponse(ex.Message));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<AvatarUploadResponse>.ErrorResponse(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<AvatarUploadResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
+        }
+    }
 }
