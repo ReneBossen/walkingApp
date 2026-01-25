@@ -1,3 +1,4 @@
+using WalkingApp.Api.Activity;
 using WalkingApp.Api.Auth;
 using WalkingApp.Api.Common.Configuration;
 using WalkingApp.Api.Common.Database;
@@ -95,6 +96,19 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
         services.AddScoped<IAuthService, AuthService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers activity-related services in the dependency injection container.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddActivityServices(this IServiceCollection services)
+    {
+        services.AddScoped<IActivityRepository, ActivityRepository>();
+        services.AddScoped<IActivityService, ActivityService>();
 
         return services;
     }
