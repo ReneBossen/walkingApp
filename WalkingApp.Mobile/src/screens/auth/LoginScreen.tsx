@@ -4,6 +4,8 @@ import { TextInput, Button, Text, Divider } from 'react-native-paper';
 import { AuthStackScreenProps } from '@navigation/types';
 import { useAppTheme } from '@hooks/useAppTheme';
 import { signInWithGoogleOAuth, supabase } from '@services/supabase';
+import { tokenStorage } from '@services/tokenStorage';
+import { useAuthStore } from '@store/authStore';
 import { getErrorMessage } from '@utils/errorUtils';
 import * as WebBrowser from 'expo-web-browser';
 import AuthLayout from './components/AuthLayout';
@@ -19,10 +21,14 @@ const TOKEN_PARAM_REFRESH = 'refresh_token';
 
 type Props = AuthStackScreenProps<'Login'>;
 
+// Default token expiration (1 hour in seconds) - Supabase default
+const DEFAULT_EXPIRES_IN = 3600;
+
 export default function LoginScreen({ navigation }: Props) {
   const { paperTheme } = useAppTheme();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const setUser = useAuthStore((state) => state.setUser);
   const {
     email,
     setEmail,
@@ -86,8 +92,23 @@ export default function LoginScreen({ navigation }: Props) {
                 throw new Error('Failed to create session after OAuth');
               }
 
-              // Success - auth state listener will handle navigation
-              console.log('Google OAuth session created for user:', sessionData.user.email);
+              // Store tokens in tokenStorage for the new auth system
+              // Get expires_in from URL params or use default (1 hour)
+              const expiresInParam = params.get('expires_in');
+              const expiresIn = expiresInParam ? parseInt(expiresInParam, 10) : DEFAULT_EXPIRES_IN;
+
+              await tokenStorage.setTokens(accessToken, refreshToken, expiresIn);
+
+              // Update auth store with user info
+              setUser({
+                id: sessionData.user.id,
+                email: sessionData.user.email ?? '',
+                displayName: sessionData.user.user_metadata?.full_name ??
+                             sessionData.user.user_metadata?.name ??
+                             sessionData.user.email?.split('@')[0] ?? 'User',
+              });
+
+              console.log('Google OAuth completed for user:', sessionData.user.email);
             } else {
               setGoogleError('Failed to extract authentication tokens');
             }
