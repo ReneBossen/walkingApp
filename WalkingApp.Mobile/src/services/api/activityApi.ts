@@ -1,67 +1,120 @@
+import { apiClient } from './client';
 import { supabase } from '../supabase';
 
+/**
+ * Activity item as returned to the mobile app.
+ */
 export interface ActivityItem {
   id: string;
-  type: 'milestone' | 'friend_achievement' | 'group_join' | 'streak';
-  userId?: string;
-  userName?: string;
+  type: string;
+  userId: string;
+  userName: string;
   avatarUrl?: string;
   message: string;
   timestamp: string;
+  metadata?: Record<string, unknown>;
+  relatedUserId?: string;
+  relatedGroupId?: string;
 }
 
+/**
+ * Activity feed response with pagination info.
+ */
 export interface ActivityFeedResponse {
   items: ActivityItem[];
+  totalCount: number;
+  hasMore: boolean;
+}
+
+/**
+ * Backend API response shape for activity item.
+ * Uses camelCase from .NET backend.
+ */
+interface BackendActivityItemResponse {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatarUrl?: string;
+  type: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  relatedUserId?: string;
+  relatedGroupId?: string;
+}
+
+/**
+ * Backend API response shape for activity feed.
+ * Uses camelCase from .NET backend.
+ */
+interface BackendActivityFeedResponse {
+  items: BackendActivityItemResponse[];
+  totalCount: number;
+  hasMore: boolean;
+}
+
+/**
+ * Maps a backend activity item (camelCase) to mobile format.
+ */
+function mapActivityItem(backend: BackendActivityItemResponse): ActivityItem {
+  return {
+    id: backend.id,
+    type: backend.type,
+    userId: backend.userId,
+    userName: backend.userName,
+    avatarUrl: backend.userAvatarUrl,
+    message: backend.message,
+    timestamp: backend.createdAt,
+    metadata: backend.metadata,
+    relatedUserId: backend.relatedUserId,
+    relatedGroupId: backend.relatedGroupId,
+  };
+}
+
+/**
+ * Parameters for fetching the activity feed.
+ */
+export interface GetFeedParams {
+  limit?: number;
+  offset?: number;
 }
 
 export const activityApi = {
   /**
-   * Fetches the activity feed for the current user
-   * This includes friend achievements, milestones, and group activities
+   * Fetches the activity feed for the current user from the backend API.
+   * This includes friend achievements, milestones, and group activities.
    *
-   * Note: activity_feed.user_id references auth.users(id), not public.users,
-   * so we cannot use a Supabase join. User details would need to be fetched
-   * separately or stored denormalized in the activity_feed table.
+   * @param params - Optional pagination parameters (limit, offset)
+   * @returns The activity feed response with items and pagination info
    */
-  getFeed: async (limit: number = 10): Promise<ActivityItem[]> => {
-    // Fetch activity feed entries without user join
-    // The user_id references auth.users which cannot be joined from public schema
-    const { data: activities, error: activityError } = await supabase
-      .from('activity_feed')
-      .select(`
-        id,
-        type,
-        user_id,
-        message,
-        created_at
-      `)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (activityError && activityError.code !== 'PGRST116') {
-      throw activityError;
+  getFeed: async (params: GetFeedParams = {}): Promise<ActivityFeedResponse> => {
+    const queryParams = new URLSearchParams();
+    if (params.limit !== undefined) {
+      queryParams.append('limit', params.limit.toString());
+    }
+    if (params.offset !== undefined) {
+      queryParams.append('offset', params.offset.toString());
     }
 
-    // Map the data to ActivityItem format
-    // Note: userName and avatarUrl are not available without a public users table
-    // These could be populated if the activity_feed table stores denormalized user data
-    const items: ActivityItem[] = (activities || []).map((item: any) => ({
-      id: item.id,
-      type: item.type as ActivityItem['type'],
-      userId: item.user_id,
-      userName: undefined,
-      avatarUrl: undefined,
-      message: item.message,
-      timestamp: item.created_at,
-    }));
+    const query = queryParams.toString();
+    const endpoint = query ? `/api/v1/activity/feed?${query}` : '/api/v1/activity/feed';
 
-    return items;
+    const response = await apiClient.get<BackendActivityFeedResponse>(endpoint);
+
+    return {
+      items: response.items.map(mapActivityItem),
+      totalCount: response.totalCount,
+      hasMore: response.hasMore,
+    };
   },
 
   /**
-   * Subscribes to real-time activity feed updates
+   * Subscribes to real-time activity feed updates using Supabase.
+   * This uses Supabase real-time subscriptions to listen for new activity items.
+   *
    * @param callback - Called when a new activity item is received
    * @param onError - Optional callback for error handling (errors are also logged to console)
+   * @returns A function to unsubscribe from the feed
    */
   subscribeToFeed: (callback: (item: ActivityItem) => void, onError?: (error: Error) => void) => {
     const subscription = supabase
@@ -75,8 +128,8 @@ export const activityApi = {
         },
         async (payload) => {
           try {
-            // Fetch the full item without user join
-            // The user_id references auth.users which cannot be joined from public schema
+            // Fetch the full item with user details from the database
+            // Note: We query the activity_feed table and join with users for user details
             const { data, error } = await supabase
               .from('activity_feed')
               .select(`
@@ -84,7 +137,14 @@ export const activityApi = {
                 type,
                 user_id,
                 message,
-                created_at
+                metadata,
+                created_at,
+                related_user_id,
+                related_group_id,
+                users:user_id (
+                  display_name,
+                  avatar_url
+                )
               `)
               .eq('id', payload.new.id)
               .single();
@@ -97,14 +157,20 @@ export const activityApi = {
             }
 
             if (data) {
+              // Handle the users join result - it could be null or an object
+              const userData = data.users as { display_name?: string; avatar_url?: string } | null;
+
               callback({
                 id: data.id,
-                type: data.type as ActivityItem['type'],
+                type: data.type,
                 userId: data.user_id,
-                userName: undefined,
-                avatarUrl: undefined,
+                userName: userData?.display_name ?? 'Unknown User',
+                avatarUrl: userData?.avatar_url,
                 message: data.message,
                 timestamp: data.created_at,
+                metadata: data.metadata as Record<string, unknown> | undefined,
+                relatedUserId: data.related_user_id,
+                relatedGroupId: data.related_group_id,
               });
             }
           } catch (error) {
