@@ -72,7 +72,7 @@ export const useHomeData = (): UseHomeDataReturn => {
     const fetchPromises: Promise<void>[] = [
       fetchTodaySteps(),
       fetchStats(),
-      fetchFeed(10),
+      fetchFeed({ limit: 10 }),
       fetchUnreadCount(),
     ];
 
