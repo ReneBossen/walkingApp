@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace WalkingApp.Api.Groups.DTOs;
 
 /// <summary>
@@ -8,5 +10,6 @@ public class UpdateMemberRoleRequest
     /// <summary>
     /// The new role for the member.
     /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public MemberRole Role { get; set; }
 }

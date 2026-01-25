@@ -22,7 +22,7 @@ This plan should be executed:
 
 ```
 WalkingApp.Api/
-  Auth/                           # NEW feature slice
+  Auth/                           # NEW feature sliceLets 
     AuthController.cs             # HTTP endpoints
     AuthService.cs                # Business logic
     IAuthService.cs               # Service interface

@@ -97,16 +97,25 @@ export default function LoginScreen({ navigation }: Props) {
               const expiresInParam = params.get('expires_in');
               const expiresIn = expiresInParam ? parseInt(expiresInParam, 10) : DEFAULT_EXPIRES_IN;
 
-              await tokenStorage.setTokens(accessToken, refreshToken, expiresIn);
+              // Store tokens with 'oauth' type - these cannot be refreshed via backend
+              console.log('[OAuth] Storing tokens with expiresIn:', expiresIn);
+              await tokenStorage.setTokens(accessToken, refreshToken, expiresIn, 'oauth');
+              console.log('[OAuth] Tokens stored successfully');
 
-              // Update auth store with user info
-              setUser({
+              // Build user info object
+              const userInfo = {
                 id: sessionData.user.id,
                 email: sessionData.user.email ?? '',
                 displayName: sessionData.user.user_metadata?.full_name ??
                              sessionData.user.user_metadata?.name ??
                              sessionData.user.email?.split('@')[0] ?? 'User',
-              });
+              };
+
+              // Store user info for session restore (OAuth tokens can't refresh to get user info)
+              await tokenStorage.setUserInfo(userInfo);
+
+              // Update auth store with user info
+              setUser(userInfo);
 
               console.log('Google OAuth completed for user:', sessionData.user.email);
             } else {

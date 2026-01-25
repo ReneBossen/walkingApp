@@ -28,7 +28,7 @@ public class SupabaseClientFactory : ISupabaseClientFactory
 
         var options = new SupabaseOptions
         {
-            AutoConnectRealtime = true,
+            AutoConnectRealtime = false,
             Headers = new Dictionary<string, string>
             {
                 { "Authorization", $"Bearer {jwtToken}" }

@@ -113,7 +113,7 @@ async function getCurrentUserId(): Promise<string> {
   interface ProfileResponse {
     id: string;
   }
-  const response = await apiClient.get<ProfileResponse>('/api/v1/users/me');
+  const response = await apiClient.get<ProfileResponse>('/users/me');
   return response.id;
 }
 
@@ -124,7 +124,7 @@ export const userPreferencesApi = {
    */
   async getPreferences(): Promise<UserPreferences> {
     const [prefsResponse, userId] = await Promise.all([
-      apiClient.get<BackendPreferencesResponse>('/api/v1/users/me/preferences'),
+      apiClient.get<BackendPreferencesResponse>('/users/me/preferences'),
       getCurrentUserId(),
     ]);
 
@@ -167,7 +167,7 @@ export const userPreferencesApi = {
     }
 
     const [prefsResponse, userId] = await Promise.all([
-      apiClient.put<BackendPreferencesResponse>('/api/v1/users/me/preferences', requestBody),
+      apiClient.put<BackendPreferencesResponse>('/users/me/preferences', requestBody),
       getCurrentUserId(),
     ]);
 

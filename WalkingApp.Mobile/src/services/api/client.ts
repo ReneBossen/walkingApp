@@ -13,7 +13,10 @@ interface RequestOptions {
 
 /**
  * Gets the current authentication token from secure storage.
- * Automatically refreshes the token if expired.
+ * Automatically refreshes the token if expired (for backend tokens only).
+ *
+ * OAuth tokens cannot be refreshed via the backend, so they are used as-is
+ * until expired, at which point the user must re-authenticate.
  *
  * @returns The access token, or null if not authenticated
  */
@@ -23,8 +26,23 @@ async function getAuthToken(): Promise<string | null> {
     return null;
   }
 
-  // Check if token is expired and refresh if needed
+  const tokenType = await tokenStorage.getTokenType();
+
+  // For OAuth tokens, check if expired locally first
+  // OAuth tokens cannot be refreshed, so if expired, clear and require re-auth
+  if (tokenType === 'oauth') {
+    const isExpired = await tokenStorage.isAccessTokenExpired();
+    if (isExpired) {
+      console.log('[getAuthToken] OAuth token expired, clearing tokens');
+      await tokenStorage.clearTokens();
+      return null;
+    }
+    return accessToken;
+  }
+
+  // For backend tokens, check if expired and try to refresh
   const isExpired = await tokenStorage.isAccessTokenExpired();
+
   if (isExpired) {
     const refreshToken = await tokenStorage.getRefreshToken();
     if (refreshToken) {
@@ -90,6 +108,13 @@ async function request<T>(
     });
 
     clearTimeout(timeoutId);
+
+    // Handle authentication errors
+    if (response.status === 401) {
+      // Token is invalid or expired, clear tokens
+      console.log('[apiClient] Received 401, clearing tokens');
+      await tokenStorage.clearTokens();
+    }
 
     // Handle empty responses (204 No Content)
     if (response.status === 204) {

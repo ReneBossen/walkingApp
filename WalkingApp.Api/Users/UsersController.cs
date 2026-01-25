@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WalkingApp.Api.Common.Extensions;
 using WalkingApp.Api.Common.Models;
@@ -9,6 +10,7 @@ namespace WalkingApp.Api.Users;
 /// Controller for user profile management endpoints.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/v1/users")]
 public class UsersController : ControllerBase
 {
@@ -28,19 +30,25 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<ApiResponse<GetProfileResponse>>> GetMyProfile()
     {
         var userId = User.GetUserId();
+        Console.WriteLine($"[UsersController] GetMyProfile - userId: {userId}");
 
         if (userId == null)
         {
+            Console.WriteLine("[UsersController] GetMyProfile - userId is null, returning Unauthorized");
             return Unauthorized(ApiResponse<GetProfileResponse>.ErrorResponse("User is not authenticated."));
         }
 
         try
         {
+            Console.WriteLine($"[UsersController] Calling EnsureProfileExistsAsync for {userId.Value}");
             var profile = await _userService.EnsureProfileExistsAsync(userId.Value);
+            Console.WriteLine($"[UsersController] Got profile: {profile?.DisplayName}");
             return Ok(ApiResponse<GetProfileResponse>.SuccessResponse(profile));
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[UsersController] Exception: {ex.GetType().Name}: {ex.Message}");
+            Console.WriteLine($"[UsersController] StackTrace: {ex.StackTrace}");
             return StatusCode(500, ApiResponse<GetProfileResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
         }
     }

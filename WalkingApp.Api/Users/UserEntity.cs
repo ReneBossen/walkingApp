@@ -24,7 +24,7 @@ internal class UserEntity : BaseModel
     public string QrCodeId { get; set; } = string.Empty;
 
     [Column("preferences")]
-    public string PreferencesJson { get; set; } = "{}";
+    public object? PreferencesJson { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
@@ -35,11 +35,44 @@ internal class UserEntity : BaseModel
     [Column("onboarding_completed")]
     public bool OnboardingCompleted { get; set; }
 
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public User ToUser()
     {
-        var preferences = string.IsNullOrWhiteSpace(PreferencesJson)
-            ? new UserPreferences()
-            : JsonSerializer.Deserialize<UserPreferences>(PreferencesJson) ?? new UserPreferences();
+        UserPreferences preferences;
+
+        try
+        {
+            if (PreferencesJson == null)
+            {
+                preferences = new UserPreferences();
+            }
+            else if (PreferencesJson is JsonElement jsonElement)
+            {
+                preferences = JsonSerializer.Deserialize<UserPreferences>(jsonElement.GetRawText(), JsonOptions) ?? new UserPreferences();
+            }
+            else if (PreferencesJson is string jsonString)
+            {
+                preferences = string.IsNullOrWhiteSpace(jsonString)
+                    ? new UserPreferences()
+                    : JsonSerializer.Deserialize<UserPreferences>(jsonString, JsonOptions) ?? new UserPreferences();
+            }
+            else
+            {
+                // Try to serialize and deserialize the object
+                var json = JsonSerializer.Serialize(PreferencesJson, JsonOptions);
+                preferences = JsonSerializer.Deserialize<UserPreferences>(json, JsonOptions) ?? new UserPreferences();
+            }
+        }
+        catch (JsonException)
+        {
+            // If parsing fails, use defaults
+            preferences = new UserPreferences();
+        }
 
         return new User
         {
@@ -56,13 +89,16 @@ internal class UserEntity : BaseModel
 
     public static UserEntity FromUser(User user)
     {
+        // Serialize preferences to a JsonElement for proper JSONB storage
+        var preferencesJson = JsonSerializer.SerializeToElement(user.Preferences, JsonOptions);
+
         return new UserEntity
         {
             Id = user.Id,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,
             QrCodeId = user.QrCodeId,
-            PreferencesJson = JsonSerializer.Serialize(user.Preferences),
+            PreferencesJson = preferencesJson,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt,
             OnboardingCompleted = user.OnboardingCompleted

@@ -49,7 +49,7 @@ describe('usersApi', () => {
 
       const result = await usersApi.getCurrentUser();
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/me');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/users/me');
       expect(result).toEqual(mockUserProfile);
     });
 
@@ -104,7 +104,7 @@ describe('usersApi', () => {
 
       const result = await usersApi.updateProfile(updates);
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me', { displayName: 'Updated Name' });
+      expect(mockApiClient.put).toHaveBeenCalledWith('/users/me', { displayName: 'Updated Name' });
       expect(result.display_name).toBe('Updated Name');
     });
 
@@ -125,7 +125,7 @@ describe('usersApi', () => {
 
       await usersApi.updateProfile(updates);
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me', {
+      expect(mockApiClient.put).toHaveBeenCalledWith('/users/me', {
         displayName: 'New Name',
         avatarUrl: 'https://new-avatar.jpg',
         onboardingCompleted: true,
@@ -142,7 +142,7 @@ describe('usersApi', () => {
 
       const result = await usersApi.updateProfile(updates);
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me', { displayName: 'New Name Only' });
+      expect(mockApiClient.put).toHaveBeenCalledWith('/users/me', { displayName: 'New Name Only' });
       expect(result.display_name).toBe('New Name Only');
     });
 
@@ -164,7 +164,7 @@ describe('usersApi', () => {
       const result = await usersApi.uploadAvatar(avatarUri);
 
       expect(mockApiClient.upload).toHaveBeenCalledWith(
-        '/api/v1/users/me/avatar',
+        '/users/me/avatar',
         expect.any(FormData)
       );
       expect(result).toBe(publicUrl);
@@ -202,7 +202,7 @@ describe('usersApi', () => {
 
       const result = await usersApi.getUserProfile('456');
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/456');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/users/456');
       expect(result).toEqual({
         id: '456',
         display_name: 'Sarah Johnson',
@@ -263,7 +263,7 @@ describe('usersApi', () => {
 
       const result = await usersApi.getUserStats('123');
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/123/stats');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/users/123/stats');
       expect(result).toEqual({
         friends_count: 10,
         groups_count: 5,
@@ -320,7 +320,7 @@ describe('usersApi', () => {
 
       const result = await usersApi.getWeeklyActivity('123');
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/123/activity');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/users/123/activity');
       expect(result).toEqual({
         total_steps: 30000,
         total_distance_meters: 24000,
@@ -388,7 +388,7 @@ describe('usersApi', () => {
 
       const result = await usersApi.getMutualGroups('456');
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/456/mutual-groups');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/users/456/mutual-groups');
       expect(result).toEqual(mockMutualGroups);
     });
 
@@ -397,7 +397,7 @@ describe('usersApi', () => {
 
       const result = await usersApi.getMutualGroups('456');
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/456/mutual-groups');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/users/456/mutual-groups');
       expect(result).toEqual([]);
     });
 

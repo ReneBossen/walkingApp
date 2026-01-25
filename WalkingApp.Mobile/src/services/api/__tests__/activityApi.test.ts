@@ -62,7 +62,7 @@ describe('activityApi', () => {
 
       const result = await activityApi.getFeed();
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/activity/feed');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/activity/feed');
       expect(result.items).toHaveLength(2);
       expect(result.totalCount).toBe(50);
       expect(result.hasMore).toBe(true);
@@ -101,7 +101,7 @@ describe('activityApi', () => {
 
       await activityApi.getFeed({ limit: 5 });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/activity/feed?limit=5');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/activity/feed?limit=5');
     });
 
     it('should pass offset parameter to endpoint', async () => {
@@ -109,7 +109,7 @@ describe('activityApi', () => {
 
       await activityApi.getFeed({ offset: 10 });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/activity/feed?offset=10');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/activity/feed?offset=10');
     });
 
     it('should pass both limit and offset parameters', async () => {
@@ -117,7 +117,7 @@ describe('activityApi', () => {
 
       await activityApi.getFeed({ limit: 20, offset: 40 });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/activity/feed?limit=20&offset=40');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/activity/feed?limit=20&offset=40');
     });
 
     it('should return empty array when no items', async () => {

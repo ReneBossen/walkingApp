@@ -30,10 +30,11 @@ describe('tokenStorage', () => {
       // Expected expiry time: now + (expiresIn * 1000)
       const expectedExpiry = mockNow + (mockExpiresIn * 1000);
 
-      expect(SecureStore.setItemAsync).toHaveBeenCalledTimes(3);
+      expect(SecureStore.setItemAsync).toHaveBeenCalledTimes(4);
       expect(SecureStore.setItemAsync).toHaveBeenCalledWith('auth_access_token', mockAccessToken);
       expect(SecureStore.setItemAsync).toHaveBeenCalledWith('auth_refresh_token', mockRefreshToken);
       expect(SecureStore.setItemAsync).toHaveBeenCalledWith('auth_token_expiry', expectedExpiry.toString());
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith('auth_token_type', 'backend');
     });
 
     it('should store tokens concurrently using Promise.all', async () => {
@@ -45,9 +46,17 @@ describe('tokenStorage', () => {
       await tokenStorage.setTokens(mockAccessToken, mockRefreshToken, mockExpiresIn);
       const endTime = Date.now();
 
-      // All three calls should happen in parallel, so total time should be ~10ms, not ~30ms
+      // All four calls should happen in parallel, so total time should be ~10ms, not ~40ms
       expect(endTime - startTime).toBeLessThan(25);
-      expect(SecureStore.setItemAsync).toHaveBeenCalledTimes(3);
+      expect(SecureStore.setItemAsync).toHaveBeenCalledTimes(4);
+    });
+
+    it('should store oauth token type when specified', async () => {
+      (SecureStore.setItemAsync as jest.Mock).mockResolvedValue(undefined);
+
+      await tokenStorage.setTokens(mockAccessToken, mockRefreshToken, mockExpiresIn, 'oauth');
+
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith('auth_token_type', 'oauth');
     });
 
     it('should calculate expiry time correctly for different expiresIn values', async () => {
@@ -200,10 +209,12 @@ describe('tokenStorage', () => {
 
       await tokenStorage.clearTokens();
 
-      expect(SecureStore.deleteItemAsync).toHaveBeenCalledTimes(3);
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledTimes(5);
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('auth_access_token');
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('auth_refresh_token');
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('auth_token_expiry');
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('auth_token_type');
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('auth_user_info');
     });
 
     it('should delete tokens concurrently using Promise.all', async () => {
@@ -215,10 +226,10 @@ describe('tokenStorage', () => {
       await tokenStorage.clearTokens();
       const endTime = Date.now();
 
-      // All three calls should happen in parallel (10ms each)
-      // If sequential, would take ~30ms+. Allow generous margin for test runner overhead.
+      // All five calls should happen in parallel (10ms each)
+      // If sequential, would take ~50ms+. Allow generous margin for test runner overhead.
       expect(endTime - startTime).toBeLessThan(100);
-      expect(SecureStore.deleteItemAsync).toHaveBeenCalledTimes(3);
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledTimes(5);
     });
   });
 
@@ -253,7 +264,109 @@ describe('tokenStorage', () => {
 
       // Should not throw even if tokens don't exist
       await expect(tokenStorage.clearTokens()).resolves.toBeUndefined();
-      expect(SecureStore.deleteItemAsync).toHaveBeenCalledTimes(3);
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledTimes(5);
+    });
+  });
+
+  describe('getTokenType', () => {
+    it('should return oauth when oauth is stored', async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue('oauth');
+
+      const result = await tokenStorage.getTokenType();
+
+      expect(SecureStore.getItemAsync).toHaveBeenCalledWith('auth_token_type');
+      expect(result).toBe('oauth');
+    });
+
+    it('should return backend when backend is stored', async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue('backend');
+
+      const result = await tokenStorage.getTokenType();
+
+      expect(result).toBe('backend');
+    });
+
+    it('should return null when no token type is stored', async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+
+      const result = await tokenStorage.getTokenType();
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when invalid token type is stored', async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue('invalid');
+
+      const result = await tokenStorage.getTokenType();
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when SecureStore throws an error', async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockRejectedValue(new Error('SecureStore error'));
+
+      const result = await tokenStorage.getTokenType();
+
+      expect(result).toBeNull();
+      expect(console.error).toHaveBeenCalledWith('Error getting token type:', expect.any(Error));
+    });
+  });
+
+  describe('setUserInfo', () => {
+    it('should store user info as JSON', async () => {
+      (SecureStore.setItemAsync as jest.Mock).mockResolvedValue(undefined);
+
+      const user = { id: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+      await tokenStorage.setUserInfo(user);
+
+      expect(SecureStore.setItemAsync).toHaveBeenCalledWith('auth_user_info', JSON.stringify(user));
+    });
+
+    it('should handle errors gracefully', async () => {
+      (SecureStore.setItemAsync as jest.Mock).mockRejectedValue(new Error('SecureStore error'));
+
+      const user = { id: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+      await tokenStorage.setUserInfo(user);
+
+      expect(console.error).toHaveBeenCalledWith('Error storing user info:', expect.any(Error));
+    });
+  });
+
+  describe('getUserInfo', () => {
+    it('should return parsed user info', async () => {
+      const user = { id: 'user-123', email: 'test@example.com', displayName: 'Test User' };
+      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(JSON.stringify(user));
+
+      const result = await tokenStorage.getUserInfo();
+
+      expect(SecureStore.getItemAsync).toHaveBeenCalledWith('auth_user_info');
+      expect(result).toEqual(user);
+    });
+
+    it('should return null when no user info is stored', async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(null);
+
+      const result = await tokenStorage.getUserInfo();
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when JSON parsing fails', async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockResolvedValue('invalid json');
+
+      const result = await tokenStorage.getUserInfo();
+
+      expect(result).toBeNull();
+      expect(console.error).toHaveBeenCalledWith('Error getting user info:', expect.any(Error));
+    });
+
+    it('should return null when SecureStore throws an error', async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockRejectedValue(new Error('SecureStore error'));
+
+      const result = await tokenStorage.getUserInfo();
+
+      expect(result).toBeNull();
+      expect(console.error).toHaveBeenCalledWith('Error getting user info:', expect.any(Error));
     });
   });
 });

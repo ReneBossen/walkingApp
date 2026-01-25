@@ -85,7 +85,7 @@ public class GroupRepository : IGroupRepository
         var groupIds = memberships.Models.Select(m => m.GroupId).ToList();
         var groups = await client
             .From<GroupEntity>()
-            .Where(x => groupIds.Contains(x.Id))
+            .Filter("id", Supabase.Postgrest.Constants.Operator.In, groupIds)
             .Get();
 
         // Get member counts for all groups

@@ -134,9 +134,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
-      // Check if access token is expired
+      const tokenType = await tokenStorage.getTokenType();
+
+      // Handle OAuth tokens - check expiry before restoring
+      if (tokenType === 'oauth') {
+        const isExpired = await tokenStorage.isAccessTokenExpired();
+        if (isExpired) {
+          console.log('[restoreSession] OAuth token expired, clearing');
+          await tokenStorage.clearTokens();
+          set({ user: null, isAuthenticated: false, isLoading: false });
+          return;
+        }
+
+        const storedUser = await tokenStorage.getUserInfo();
+        if (storedUser) {
+          set({ user: storedUser, isAuthenticated: true, isLoading: false });
+        } else {
+          // No stored user - clear and require re-login
+          await tokenStorage.clearTokens();
+          set({ user: null, isAuthenticated: false, isLoading: false });
+        }
+        return;
+      }
+
       const isExpired = await tokenStorage.isAccessTokenExpired();
 
+      // Handle backend tokens - can refresh via backend
       if (isExpired) {
         // Try to refresh the token
         try {

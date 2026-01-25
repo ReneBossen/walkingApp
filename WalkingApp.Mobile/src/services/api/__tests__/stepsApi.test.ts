@@ -42,7 +42,7 @@ describe('stepsApi', () => {
         date: '2024-01-15',
       });
 
-      expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/steps', {
+      expect(mockApiClient.post).toHaveBeenCalledWith('/steps', {
         stepCount: 8500,
         distanceMeters: 6800,
         date: '2024-01-15',
@@ -69,7 +69,7 @@ describe('stepsApi', () => {
         source: 'health-app',
       });
 
-      expect(mockApiClient.post).toHaveBeenCalledWith('/api/v1/steps', {
+      expect(mockApiClient.post).toHaveBeenCalledWith('/steps', {
         stepCount: 5000,
         distanceMeters: 4000,
         date: '2024-01-15',
@@ -104,7 +104,7 @@ describe('stepsApi', () => {
 
       const result = await stepsApi.getTodaySteps();
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/steps/today');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/steps/today');
       expect(result).toEqual(mockResponse);
     });
 
@@ -151,7 +151,7 @@ describe('stepsApi', () => {
 
       const result = await stepsApi.getStats();
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/steps/stats');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/steps/stats');
       expect(result).toEqual(mockStats);
     });
 
@@ -222,7 +222,7 @@ describe('stepsApi', () => {
       });
 
       expect(mockApiClient.get).toHaveBeenCalledWith(
-        '/api/v1/steps/history?startDate=2024-01-01&endDate=2024-01-15'
+        '/steps/history?startDate=2024-01-01&endDate=2024-01-15'
       );
       expect(result).toEqual(mockResponse);
     });
@@ -245,7 +245,7 @@ describe('stepsApi', () => {
       });
 
       expect(mockApiClient.get).toHaveBeenCalledWith(
-        '/api/v1/steps/history?startDate=2024-01-01&endDate=2024-01-15&page=2&pageSize=20'
+        '/steps/history?startDate=2024-01-01&endDate=2024-01-15&page=2&pageSize=20'
       );
       expect(result).toEqual(mockResponse);
     });
@@ -305,7 +305,7 @@ describe('stepsApi', () => {
       });
 
       expect(mockApiClient.get).toHaveBeenCalledWith(
-        '/api/v1/steps/daily?startDate=2024-01-01&endDate=2024-01-15'
+        '/steps/daily?startDate=2024-01-01&endDate=2024-01-15'
       );
       expect(result).toEqual(mockDailyHistory);
     });
@@ -349,7 +349,7 @@ describe('stepsApi', () => {
 
       const result = await stepsApi.getEntry('123');
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/steps/123');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/steps/123');
       expect(result).toEqual(mockEntry);
     });
 
@@ -369,7 +369,7 @@ describe('stepsApi', () => {
 
       await stepsApi.deleteEntry('123');
 
-      expect(mockApiClient.delete).toHaveBeenCalledWith('/api/v1/steps/123');
+      expect(mockApiClient.delete).toHaveBeenCalledWith('/steps/123');
     });
 
     it('should throw error when delete fails', async () => {

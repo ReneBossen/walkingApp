@@ -143,7 +143,7 @@ export const usersApi = {
    * Note: This no longer includes preferences - use userPreferencesApi for that.
    */
   getCurrentUser: async (): Promise<UserProfileData> => {
-    const response = await apiClient.get<BackendProfileResponse>('/api/v1/users/me');
+    const response = await apiClient.get<BackendProfileResponse>('/users/me');
     return mapProfileResponse(response);
   },
 
@@ -164,7 +164,7 @@ export const usersApi = {
       requestBody.onboardingCompleted = updates.onboarding_completed;
     }
 
-    const response = await apiClient.put<BackendProfileResponse>('/api/v1/users/me', requestBody);
+    const response = await apiClient.put<BackendProfileResponse>('/users/me', requestBody);
     return mapProfileResponse(response);
   },
 
@@ -184,7 +184,7 @@ export const usersApi = {
       type,
     } as unknown as Blob);
 
-    const response = await apiClient.upload<BackendAvatarResponse>('/api/v1/users/me/avatar', formData);
+    const response = await apiClient.upload<BackendAvatarResponse>('/users/me/avatar', formData);
     return response.avatarUrl;
   },
 
@@ -193,7 +193,7 @@ export const usersApi = {
    * Returns limited data based on privacy settings.
    */
   getUserProfile: async (userId: string): Promise<PublicUserProfile> => {
-    const response = await apiClient.get<BackendProfileResponse>(`/api/v1/users/${userId}`);
+    const response = await apiClient.get<BackendProfileResponse>(`/users/${userId}`);
     return {
       id: response.id,
       display_name: response.displayName,
@@ -207,7 +207,7 @@ export const usersApi = {
    * Fetches user stats (friends count, groups count, badges count).
    */
   getUserStats: async (userId: string): Promise<UserStats> => {
-    const response = await apiClient.get<BackendUserStatsResponse>(`/api/v1/users/${userId}/stats`);
+    const response = await apiClient.get<BackendUserStatsResponse>(`/users/${userId}/stats`);
     return {
       friends_count: response.friendsCount,
       groups_count: response.groupsCount,
@@ -219,7 +219,7 @@ export const usersApi = {
    * Fetches weekly activity summary for a user.
    */
   getWeeklyActivity: async (userId: string): Promise<WeeklyActivity> => {
-    const response = await apiClient.get<BackendUserActivityResponse>(`/api/v1/users/${userId}/activity`);
+    const response = await apiClient.get<BackendUserActivityResponse>(`/users/${userId}/activity`);
     return {
       total_steps: response.totalSteps,
       total_distance_meters: response.totalDistanceMeters,
@@ -242,7 +242,7 @@ export const usersApi = {
    * Fetches mutual groups between current user and another user.
    */
   getMutualGroups: async (otherUserId: string): Promise<MutualGroup[]> => {
-    const response = await apiClient.get<BackendMutualGroupResponse[]>(`/api/v1/users/${otherUserId}/mutual-groups`);
+    const response = await apiClient.get<BackendMutualGroupResponse[]>(`/users/${otherUserId}/mutual-groups`);
     return response;
   },
 

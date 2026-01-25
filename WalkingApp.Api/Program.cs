@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using WalkingApp.Api.Common.Authentication;
 using WalkingApp.Api.Common.Extensions;
 using WalkingApp.Api.Common.Middleware;
@@ -15,6 +16,14 @@ builder.Services.AddHttpContextAccessor();
 
 // Add Supabase services
 builder.Services.AddSupabaseServices(builder.Configuration);
+
+// Configure authentication with Supabase JWT handler
+builder.Services.AddAuthentication(SupabaseAuthDefaults.AuthenticationScheme)
+    .AddScheme<AuthenticationSchemeOptions, SupabaseAuthHandler>(
+        SupabaseAuthDefaults.AuthenticationScheme, null);
+
+// Add authorization services
+builder.Services.AddAuthorization();
 
 // Add user services
 builder.Services.AddUserServices();
@@ -50,8 +59,9 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseHttpsRedirection();
 
-// Add Supabase authentication middleware
-app.UseMiddleware<SupabaseAuthMiddleware>();
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

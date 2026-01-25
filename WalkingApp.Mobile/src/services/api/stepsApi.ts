@@ -86,7 +86,7 @@ export const stepsApi = {
    * @returns The created step entry
    */
   addSteps: async (request: RecordStepsRequest): Promise<StepEntry> => {
-    return apiClient.post<StepEntry>('/api/v1/steps', request);
+    return apiClient.post<StepEntry>('/steps', request);
   },
 
   /**
@@ -95,7 +95,7 @@ export const stepsApi = {
    * @returns Today's step summary (totalSteps will be 0 if no entries)
    */
   getTodaySteps: async (): Promise<DailyStepsResponse> => {
-    return apiClient.get<DailyStepsResponse>('/api/v1/steps/today');
+    return apiClient.get<DailyStepsResponse>('/steps/today');
   },
 
   /**
@@ -104,7 +104,7 @@ export const stepsApi = {
    * @returns Step statistics including today, week, month totals and streaks
    */
   getStats: async (): Promise<StepStats> => {
-    return apiClient.get<StepStats>('/api/v1/steps/stats');
+    return apiClient.get<StepStats>('/steps/stats');
   },
 
   /**
@@ -124,7 +124,7 @@ export const stepsApi = {
       queryParams.append('pageSize', params.pageSize.toString());
     }
 
-    return apiClient.get<StepHistoryResponse>(`/api/v1/steps/history?${queryParams}`);
+    return apiClient.get<StepHistoryResponse>(`/steps/history?${queryParams}`);
   },
 
   /**
@@ -138,7 +138,7 @@ export const stepsApi = {
     queryParams.append('startDate', params.startDate);
     queryParams.append('endDate', params.endDate);
 
-    return apiClient.get<DailyStepsResponse[]>(`/api/v1/steps/daily?${queryParams}`);
+    return apiClient.get<DailyStepsResponse[]>(`/steps/daily?${queryParams}`);
   },
 
   /**
@@ -148,7 +148,7 @@ export const stepsApi = {
    * @returns The step entry
    */
   getEntry: async (id: string): Promise<StepEntry> => {
-    return apiClient.get<StepEntry>(`/api/v1/steps/${id}`);
+    return apiClient.get<StepEntry>(`/steps/${id}`);
   },
 
   /**
@@ -157,6 +157,6 @@ export const stepsApi = {
    * @param id - The step entry ID to delete
    */
   deleteEntry: async (id: string): Promise<void> => {
-    return apiClient.delete<void>(`/api/v1/steps/${id}`);
+    return apiClient.delete<void>(`/steps/${id}`);
   },
 };
