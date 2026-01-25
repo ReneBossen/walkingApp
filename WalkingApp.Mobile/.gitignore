@@ -41,3 +41,6 @@ yarn-error.*
 /ios
 /android
 WalkingApp.Mobile/temp-build/
+
+# Test coverage
+coverage/
