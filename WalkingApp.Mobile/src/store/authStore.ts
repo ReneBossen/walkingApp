@@ -140,7 +140,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (tokenType === 'oauth') {
         const isExpired = await tokenStorage.isAccessTokenExpired();
         if (isExpired) {
-          console.log('[restoreSession] OAuth token expired, clearing');
           await tokenStorage.clearTokens();
           set({ user: null, isAuthenticated: false, isLoading: false });
           return;

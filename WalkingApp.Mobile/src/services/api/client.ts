@@ -2,6 +2,7 @@ import { API_CONFIG } from '../../config/api';
 import { ApiResponse, ApiError, ApiErrorResponse } from './types';
 import { tokenStorage } from '../tokenStorage';
 import { authApi } from './authApi';
+import { useAuthStore } from '../../store/authStore';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -33,8 +34,9 @@ async function getAuthToken(): Promise<string | null> {
   if (tokenType === 'oauth') {
     const isExpired = await tokenStorage.isAccessTokenExpired();
     if (isExpired) {
-      console.log('[getAuthToken] OAuth token expired, clearing tokens');
       await tokenStorage.clearTokens();
+      // Notify the auth store that the session has expired
+      useAuthStore.getState().setUser(null);
       return null;
     }
     return accessToken;
@@ -111,9 +113,9 @@ async function request<T>(
 
     // Handle authentication errors
     if (response.status === 401) {
-      // Token is invalid or expired, clear tokens
-      console.log('[apiClient] Received 401, clearing tokens');
+      // Token is invalid or expired, clear tokens and notify auth store
       await tokenStorage.clearTokens();
+      useAuthStore.getState().setUser(null);
     }
 
     // Handle empty responses (204 No Content)

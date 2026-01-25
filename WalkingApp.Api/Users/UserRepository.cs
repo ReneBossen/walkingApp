@@ -1,4 +1,5 @@
 using Supabase;
+using WalkingApp.Api.Common.Constants;
 using WalkingApp.Api.Common.Database;
 
 namespace WalkingApp.Api.Users;
@@ -107,13 +108,13 @@ public class UserRepository : IUserRepository
         // Count friendships where user is requester with status='accepted'
         var asRequester = await client
             .From<FriendshipQueryEntity>()
-            .Where(x => x.RequesterId == userId && x.Status == "accepted")
+            .Where(x => x.RequesterId == userId && x.Status == FriendshipStatusStrings.Accepted)
             .Get();
 
         // Count friendships where user is addressee with status='accepted'
         var asAddressee = await client
             .From<FriendshipQueryEntity>()
-            .Where(x => x.AddresseeId == userId && x.Status == "accepted")
+            .Where(x => x.AddresseeId == userId && x.Status == FriendshipStatusStrings.Accepted)
             .Get();
 
         return asRequester.Models.Count + asAddressee.Models.Count;

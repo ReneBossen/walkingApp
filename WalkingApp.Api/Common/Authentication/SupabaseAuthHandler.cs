@@ -42,27 +42,20 @@ public class SupabaseAuthHandler : AuthenticationHandler<AuthenticationSchemeOpt
     /// <returns>The authentication result.</returns>
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        Console.WriteLine($"[Auth] Authenticating request to {Request.Path}");
         var token = ExtractToken();
 
         if (string.IsNullOrWhiteSpace(token))
         {
-            Console.WriteLine("[Auth] No token found");
             return AuthenticateResult.NoResult();
         }
-
-        Console.WriteLine($"[Auth] Token found, length: {token.Length}");
 
         try
         {
             var claimsPrincipal = await ValidateTokenAsync(token);
             if (claimsPrincipal == null)
             {
-                Console.WriteLine("[Auth] Token validation returned null");
                 return AuthenticateResult.Fail("Invalid token");
             }
-
-            Console.WriteLine("[Auth] Token validated successfully");
 
             // Store the token in HttpContext.Items for repositories to use
             Context.Items["SupabaseToken"] = token;
@@ -72,13 +65,11 @@ public class SupabaseAuthHandler : AuthenticationHandler<AuthenticationSchemeOpt
         }
         catch (SecurityTokenException ex)
         {
-            Console.WriteLine($"[Auth] SecurityTokenException: {ex.Message}");
             Logger.LogWarning(ex, "Token validation failed: {Message}", ex.Message);
             return AuthenticateResult.Fail(ex.Message);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Auth] Exception: {ex.GetType().Name}: {ex.Message}");
             Logger.LogWarning(ex, "Unexpected error during token validation");
             return AuthenticateResult.Fail("Token validation error");
         }

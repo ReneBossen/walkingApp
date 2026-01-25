@@ -88,15 +88,12 @@ export const tokenStorage = {
   isAccessTokenExpired: async (): Promise<boolean> => {
     try {
       const expiryStr = await SecureStore.getItemAsync(TOKEN_EXPIRY_KEY);
-      console.log('[isAccessTokenExpired] expiryStr:', expiryStr);
       if (!expiryStr) {
-        console.log('[isAccessTokenExpired] No expiry stored, returning true');
         return true; // No expiry stored, assume expired
       }
 
       const expiryTime = parseInt(expiryStr, 10);
       if (isNaN(expiryTime)) {
-        console.log('[isAccessTokenExpired] Invalid expiry value, returning true');
         return true; // Invalid expiry value
       }
 
@@ -104,7 +101,6 @@ export const tokenStorage = {
       const bufferMs = 60 * 1000;
       const now = Date.now();
       const isExpired = now > (expiryTime - bufferMs);
-      console.log('[isAccessTokenExpired] now:', now, 'expiryTime:', expiryTime, 'isExpired:', isExpired);
       return isExpired;
     } catch (error) {
       console.error('Error checking token expiry:', error);

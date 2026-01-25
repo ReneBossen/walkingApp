@@ -30,25 +30,25 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<ApiResponse<GetProfileResponse>>> GetMyProfile()
     {
         var userId = User.GetUserId();
-        Console.WriteLine($"[UsersController] GetMyProfile - userId: {userId}");
 
         if (userId == null)
         {
-            Console.WriteLine("[UsersController] GetMyProfile - userId is null, returning Unauthorized");
             return Unauthorized(ApiResponse<GetProfileResponse>.ErrorResponse("User is not authenticated."));
         }
 
         try
         {
-            Console.WriteLine($"[UsersController] Calling EnsureProfileExistsAsync for {userId.Value}");
             var profile = await _userService.EnsureProfileExistsAsync(userId.Value);
-            Console.WriteLine($"[UsersController] Got profile: {profile?.DisplayName}");
+
+            if (profile == null)
+            {
+                return NotFound(ApiResponse<GetProfileResponse>.ErrorResponse("Profile not found."));
+            }
+
             return Ok(ApiResponse<GetProfileResponse>.SuccessResponse(profile));
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[UsersController] Exception: {ex.GetType().Name}: {ex.Message}");
-            Console.WriteLine($"[UsersController] StackTrace: {ex.StackTrace}");
             return StatusCode(500, ApiResponse<GetProfileResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
         }
     }
@@ -244,6 +244,11 @@ public class UsersController : ControllerBase
     /// <summary>
     /// Gets user statistics including friends count, groups count, and badges count.
     /// </summary>
+    /// <remarks>
+    /// Authorization is handled by Supabase Row Level Security (RLS) policies.
+    /// Users can only view statistics for themselves or their accepted friends.
+    /// RLS policies restrict data access based on friendship status in the database.
+    /// </remarks>
     /// <param name="id">The user ID.</param>
     /// <returns>The user statistics.</returns>
     [HttpGet("{id}/stats")]
@@ -279,6 +284,11 @@ public class UsersController : ControllerBase
     /// <summary>
     /// Gets weekly activity summary for a user.
     /// </summary>
+    /// <remarks>
+    /// Authorization is handled by Supabase Row Level Security (RLS) policies.
+    /// Users can only view activity for themselves or their accepted friends.
+    /// RLS policies restrict data access based on friendship status in the database.
+    /// </remarks>
     /// <param name="id">The user ID.</param>
     /// <returns>The weekly activity summary.</returns>
     [HttpGet("{id}/activity")]
@@ -314,6 +324,11 @@ public class UsersController : ControllerBase
     /// <summary>
     /// Gets groups that are shared between the current user and another user.
     /// </summary>
+    /// <remarks>
+    /// Authorization is handled by Supabase Row Level Security (RLS) policies.
+    /// Users can only view mutual groups with their accepted friends.
+    /// RLS policies restrict data access based on friendship status in the database.
+    /// </remarks>
     /// <param name="id">The other user ID.</param>
     /// <returns>List of mutual groups.</returns>
     [HttpGet("{id}/mutual-groups")]

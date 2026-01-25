@@ -21,7 +21,12 @@ const TOKEN_PARAM_REFRESH = 'refresh_token';
 
 type Props = AuthStackScreenProps<'Login'>;
 
-// Default token expiration (1 hour in seconds) - Supabase default
+/**
+ * Default OAuth token expiration in seconds.
+ * This matches Supabase's default JWT expiry of 1 hour.
+ * Note: If Supabase configuration changes, this value should be updated.
+ * The actual expiry is validated server-side; this is used for local token management.
+ */
 const DEFAULT_EXPIRES_IN = 3600;
 
 export default function LoginScreen({ navigation }: Props) {
@@ -98,9 +103,7 @@ export default function LoginScreen({ navigation }: Props) {
               const expiresIn = expiresInParam ? parseInt(expiresInParam, 10) : DEFAULT_EXPIRES_IN;
 
               // Store tokens with 'oauth' type - these cannot be refreshed via backend
-              console.log('[OAuth] Storing tokens with expiresIn:', expiresIn);
               await tokenStorage.setTokens(accessToken, refreshToken, expiresIn, 'oauth');
-              console.log('[OAuth] Tokens stored successfully');
 
               // Build user info object
               const userInfo = {
@@ -116,8 +119,6 @@ export default function LoginScreen({ navigation }: Props) {
 
               // Update auth store with user info
               setUser(userInfo);
-
-              console.log('Google OAuth completed for user:', sessionData.user.email);
             } else {
               setGoogleError('Failed to extract authentication tokens');
             }

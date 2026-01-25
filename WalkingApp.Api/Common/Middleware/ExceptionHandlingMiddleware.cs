@@ -20,16 +20,12 @@ public class ExceptionHandlingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        Console.WriteLine($"[Request] {context.Request.Method} {context.Request.Path}");
         try
         {
             await _next(context);
-            Console.WriteLine($"[Response] {context.Request.Path} -> {context.Response.StatusCode}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Exception] {context.Request.Path} -> {ex.GetType().Name}: {ex.Message}");
-            Console.WriteLine($"[StackTrace] {ex.StackTrace}");
             _logger.LogError(ex, "An unhandled exception occurred: {Message}", ex.Message);
             await HandleExceptionAsync(context, ex);
         }
