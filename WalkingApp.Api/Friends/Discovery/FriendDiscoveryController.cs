@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WalkingApp.Api.Common.Extensions;
 using WalkingApp.Api.Common.Models;
@@ -9,6 +10,7 @@ namespace WalkingApp.Api.Friends.Discovery;
 /// Controller for friend discovery operations.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/v1/friends/discovery")]
 public class FriendDiscoveryController : ControllerBase
 {

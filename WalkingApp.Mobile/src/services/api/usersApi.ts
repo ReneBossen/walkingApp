@@ -1,5 +1,4 @@
 import { apiClient } from './client';
-import { supabase } from '../supabase';
 
 /**
  * User profile data from the users table.
@@ -99,6 +98,33 @@ interface BackendAvatarResponse {
 }
 
 /**
+ * Backend API response shape for user stats.
+ */
+interface BackendUserStatsResponse {
+  friendsCount: number;
+  groupsCount: number;
+  badgesCount: number;
+}
+
+/**
+ * Backend API response shape for user activity.
+ */
+interface BackendUserActivityResponse {
+  totalSteps: number;
+  totalDistanceMeters: number;
+  averageStepsPerDay: number;
+  currentStreak: number;
+}
+
+/**
+ * Backend API response shape for mutual groups.
+ */
+interface BackendMutualGroupResponse {
+  id: string;
+  name: string;
+}
+
+/**
  * Maps backend profile response (camelCase) to mobile format (snake_case).
  */
 function mapProfileResponse(backend: BackendProfileResponse): UserProfileData {
@@ -117,7 +143,7 @@ export const usersApi = {
    * Note: This no longer includes preferences - use userPreferencesApi for that.
    */
   getCurrentUser: async (): Promise<UserProfileData> => {
-    const response = await apiClient.get<BackendProfileResponse>('/api/v1/users/me');
+    const response = await apiClient.get<BackendProfileResponse>('/users/me');
     return mapProfileResponse(response);
   },
 
@@ -138,7 +164,7 @@ export const usersApi = {
       requestBody.onboardingCompleted = updates.onboarding_completed;
     }
 
-    const response = await apiClient.put<BackendProfileResponse>('/api/v1/users/me', requestBody);
+    const response = await apiClient.put<BackendProfileResponse>('/users/me', requestBody);
     return mapProfileResponse(response);
   },
 
@@ -158,131 +184,47 @@ export const usersApi = {
       type,
     } as unknown as Blob);
 
-    const response = await apiClient.upload<BackendAvatarResponse>('/api/v1/users/me/avatar', formData);
+    const response = await apiClient.upload<BackendAvatarResponse>('/users/me/avatar', formData);
     return response.avatarUrl;
   },
 
   /**
    * Fetches another user's public profile.
    * Returns limited data based on privacy settings.
-   * Note: This still uses Supabase directly as there's no dedicated backend endpoint
-   * that returns all the privacy-aware public profile data.
    */
   getUserProfile: async (userId: string): Promise<PublicUserProfile> => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, display_name, avatar_url, created_at')
-      .eq('id', userId)
-      .single();
-
-    if (error) throw error;
-
-    // Check privacy settings from user_preferences
-    const { data: prefs } = await supabase
-      .from('user_preferences')
-      .select('privacy_find_me')
-      .eq('id', userId)
-      .single();
-
-    const isPrivate = prefs?.privacy_find_me === 'private';
-
+    const response = await apiClient.get<BackendProfileResponse>(`/users/${userId}`);
     return {
-      id: data.id,
-      display_name: data.display_name,
-      avatar_url: data.avatar_url,
-      created_at: data.created_at,
-      is_private: isPrivate,
+      id: response.id,
+      display_name: response.displayName,
+      avatar_url: response.avatarUrl,
+      created_at: response.createdAt,
+      is_private: false, // TODO: Backend doesn't provide this yet
     };
   },
 
   /**
    * Fetches user stats (friends count, groups count, badges count).
-   * Note: This still uses Supabase directly as there's no dedicated backend endpoint.
    */
   getUserStats: async (userId: string): Promise<UserStats> => {
-    // Get friends count - count accepted friendships
-    const { count: friendsCount } = await supabase
-      .from('friendships')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'accepted')
-      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
-
-    // Get groups count
-    const { count: groupsCount } = await supabase
-      .from('group_memberships')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
-    // For now, badges are not implemented - return 0
-    // TODO: Implement badges/achievements table
-    const badgesCount = 0;
-
+    const response = await apiClient.get<BackendUserStatsResponse>(`/users/${userId}/stats`);
     return {
-      friends_count: friendsCount ?? 0,
-      groups_count: groupsCount ?? 0,
-      badges_count: badgesCount,
+      friends_count: response.friendsCount,
+      groups_count: response.groupsCount,
+      badges_count: response.badgesCount,
     };
   },
 
   /**
    * Fetches weekly activity summary for a user.
-   * Note: This still uses Supabase directly as there's no dedicated backend endpoint.
    */
   getWeeklyActivity: async (userId: string): Promise<WeeklyActivity> => {
-    // Calculate date range for current week (last 7 days)
-    const today = new Date();
-    const weekAgo = new Date(today);
-    weekAgo.setDate(today.getDate() - 6);
-
-    const startDate = weekAgo.toISOString().split('T')[0];
-    const endDate = today.toISOString().split('T')[0];
-
-    // Get step entries for the week
-    const { data: entries, error } = await supabase
-      .from('step_entries')
-      .select('date, step_count, distance_meters')
-      .eq('user_id', userId)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: false });
-
-    if (error) throw error;
-
-    const totalSteps = entries?.reduce((sum, e) => sum + e.step_count, 0) ?? 0;
-    const totalDistance = entries?.reduce((sum, e) => sum + (e.distance_meters ?? 0), 0) ?? 0;
-    const daysWithActivity = entries?.length ?? 0;
-    const averageSteps = daysWithActivity > 0 ? Math.round(totalSteps / daysWithActivity) : 0;
-
-    // Calculate streak
-    let streak = 0;
-    const { data: allEntries } = await supabase
-      .from('step_entries')
-      .select('date, step_count')
-      .eq('user_id', userId)
-      .order('date', { ascending: false });
-
-    if (allEntries) {
-      const now = new Date();
-      const currentDateUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-
-      for (const entry of allEntries) {
-        const [year, month, day] = entry.date.split('-').map(Number);
-        const entryDateUtc = Date.UTC(year, month - 1, day);
-        const diffDays = Math.floor((currentDateUtc - entryDateUtc) / (1000 * 60 * 60 * 24));
-
-        if (diffDays === streak && entry.step_count > 0) {
-          streak++;
-        } else {
-          break;
-        }
-      }
-    }
-
+    const response = await apiClient.get<BackendUserActivityResponse>(`/users/${userId}/activity`);
     return {
-      total_steps: totalSteps,
-      total_distance_meters: totalDistance,
-      average_steps_per_day: averageSteps,
-      current_streak: streak,
+      total_steps: response.totalSteps,
+      total_distance_meters: response.totalDistanceMeters,
+      average_steps_per_day: response.averageStepsPerDay,
+      current_streak: response.currentStreak,
     };
   },
 
@@ -298,55 +240,10 @@ export const usersApi = {
 
   /**
    * Fetches mutual groups between current user and another user.
-   * Note: This still uses Supabase directly as there's no dedicated backend endpoint.
    */
   getMutualGroups: async (otherUserId: string): Promise<MutualGroup[]> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
-
-    // Get current user's groups
-    const { data: myGroups } = await supabase
-      .from('group_memberships')
-      .select('group_id')
-      .eq('user_id', user.id);
-
-    if (!myGroups || myGroups.length === 0) return [];
-
-    const myGroupIds = myGroups.map(g => g.group_id);
-
-    // Get other user's groups that match
-    const { data: theirGroups, error } = await supabase
-      .from('group_memberships')
-      .select(`
-        group_id,
-        groups (
-          id,
-          name
-        )
-      `)
-      .eq('user_id', otherUserId)
-      .in('group_id', myGroupIds);
-
-    if (error) throw error;
-
-    // Supabase returns groups as an object (single relation) but TypeScript infers array
-    // We need to handle the actual runtime shape
-    const results: MutualGroup[] = [];
-
-    for (const membership of theirGroups ?? []) {
-      const groups = membership.groups as unknown;
-      // Handle both single object and array cases
-      if (groups && typeof groups === 'object') {
-        if (Array.isArray(groups) && groups.length > 0) {
-          results.push({ id: groups[0].id, name: groups[0].name });
-        } else if ('id' in groups && 'name' in groups) {
-          const group = groups as { id: string; name: string };
-          results.push({ id: group.id, name: group.name });
-        }
-      }
-    }
-
-    return results;
+    const response = await apiClient.get<BackendMutualGroupResponse[]>(`/users/${otherUserId}/mutual-groups`);
+    return response;
   },
 
 };

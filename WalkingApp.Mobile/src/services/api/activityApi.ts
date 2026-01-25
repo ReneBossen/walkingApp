@@ -97,7 +97,7 @@ export const activityApi = {
     }
 
     const query = queryParams.toString();
-    const endpoint = query ? `/api/v1/activity/feed?${query}` : '/api/v1/activity/feed';
+    const endpoint = query ? `/activity/feed?${query}` : '/activity/feed';
 
     const response = await apiClient.get<BackendActivityFeedResponse>(endpoint);
 

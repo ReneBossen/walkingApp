@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WalkingApp.Api.Common.Extensions;
 using WalkingApp.Api.Common.Models;
@@ -9,6 +10,7 @@ namespace WalkingApp.Api.Groups;
 /// Controller for group-related operations.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/v1/groups")]
 public class GroupsController : ControllerBase
 {

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace WalkingApp.Api.Groups.DTOs;
 
 /// <summary>
@@ -23,5 +25,6 @@ public class CreateGroupRequest
     /// <summary>
     /// Competition period type for the group leaderboard.
     /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public CompetitionPeriodType PeriodType { get; set; }
 }

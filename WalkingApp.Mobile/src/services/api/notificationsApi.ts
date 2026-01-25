@@ -67,7 +67,7 @@ export const notificationsApi = {
    */
   getNotifications: async (): Promise<Notification[]> => {
     const response = await apiClient.get<BackendNotificationListResponse>(
-      '/api/v1/notifications?limit=50&offset=0'
+      '/notifications?limit=50&offset=0'
     );
     return response.items.map(mapNotificationResponse);
   },
@@ -77,7 +77,7 @@ export const notificationsApi = {
    */
   getUnreadCount: async (): Promise<number> => {
     const response = await apiClient.get<BackendUnreadCountResponse>(
-      '/api/v1/notifications/unread/count'
+      '/notifications/unread/count'
     );
     return response.count;
   },
@@ -86,20 +86,20 @@ export const notificationsApi = {
    * Marks a specific notification as read.
    */
   markAsRead: async (notificationId: string): Promise<void> => {
-    await apiClient.put<void>(`/api/v1/notifications/${notificationId}/read`);
+    await apiClient.put<void>(`/notifications/${notificationId}/read`);
   },
 
   /**
    * Marks all notifications as read for the current user.
    */
   markAllAsRead: async (): Promise<void> => {
-    await apiClient.put<void>('/api/v1/notifications/read-all');
+    await apiClient.put<void>('/notifications/read-all');
   },
 
   /**
    * Deletes a specific notification.
    */
   deleteNotification: async (notificationId: string): Promise<void> => {
-    await apiClient.delete<void>(`/api/v1/notifications/${notificationId}`);
+    await apiClient.delete<void>(`/notifications/${notificationId}`);
   },
 };

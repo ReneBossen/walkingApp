@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace WalkingApp.Api.Groups.DTOs;
 
 /// <summary>
@@ -23,6 +25,7 @@ public class GroupMemberResponse
     /// <summary>
     /// Role of the user in the group.
     /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public MemberRole Role { get; set; }
 
     /// <summary>

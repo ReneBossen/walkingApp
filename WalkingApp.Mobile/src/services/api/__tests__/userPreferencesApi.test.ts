@@ -41,8 +41,8 @@ describe('userPreferencesApi', () => {
 
       const result = await userPreferencesApi.getPreferences();
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/me/preferences');
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/me');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/users/me/preferences');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/users/me');
       expect(result.id).toBe('123');
       expect(result.daily_step_goal).toBe(10000);
       expect(result.units).toBe('metric');
@@ -125,7 +125,7 @@ describe('userPreferencesApi', () => {
 
       const result = await userPreferencesApi.updatePreferences(updates);
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+      expect(mockApiClient.put).toHaveBeenCalledWith('/users/me/preferences', {
         dailyStepGoal: 12000,
         distanceUnit: 'imperial',
       });
@@ -142,7 +142,7 @@ describe('userPreferencesApi', () => {
 
       await userPreferencesApi.updatePreferences({ notifications_enabled: false });
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+      expect(mockApiClient.put).toHaveBeenCalledWith('/users/me/preferences', {
         notificationsEnabled: false,
       });
     });
@@ -156,7 +156,7 @@ describe('userPreferencesApi', () => {
 
       await userPreferencesApi.updatePreferences({ privacy_find_me: 'private' });
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+      expect(mockApiClient.put).toHaveBeenCalledWith('/users/me/preferences', {
         privateProfile: true,
       });
     });
@@ -207,7 +207,7 @@ describe('userPreferencesApi', () => {
 
       const result = await userPreferencesApi.updatePreferences({});
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {});
+      expect(mockApiClient.put).toHaveBeenCalledWith('/users/me/preferences', {});
       expect(result.id).toBe('123');
     });
 
@@ -225,7 +225,7 @@ describe('userPreferencesApi', () => {
         privacy_show_steps: 'public',
       });
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+      expect(mockApiClient.put).toHaveBeenCalledWith('/users/me/preferences', {
         privateProfile: false,
       });
     });
@@ -244,7 +244,7 @@ describe('userPreferencesApi', () => {
         privacy_show_steps: 'private',
       });
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+      expect(mockApiClient.put).toHaveBeenCalledWith('/users/me/preferences', {
         privateProfile: true,
       });
     });

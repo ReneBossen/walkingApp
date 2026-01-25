@@ -10,6 +10,7 @@ jest.mock('@services/tokenStorage', () => ({
     isAccessTokenExpired: jest.fn(),
     setTokens: jest.fn(),
     clearTokens: jest.fn(),
+    getTokenType: jest.fn(),
   },
 }));
 
@@ -17,6 +18,16 @@ jest.mock('@services/tokenStorage', () => ({
 jest.mock('../authApi', () => ({
   authApi: {
     refreshToken: jest.fn(),
+  },
+}));
+
+// Mock the auth store
+const mockSetUser = jest.fn();
+jest.mock('../../../store/authStore', () => ({
+  useAuthStore: {
+    getState: () => ({
+      setUser: mockSetUser,
+    }),
   },
 }));
 
@@ -37,6 +48,7 @@ const mockGetRefreshToken = tokenStorage.getRefreshToken as jest.Mock;
 const mockIsAccessTokenExpired = tokenStorage.isAccessTokenExpired as jest.Mock;
 const mockSetTokens = tokenStorage.setTokens as jest.Mock;
 const mockClearTokens = tokenStorage.clearTokens as jest.Mock;
+const mockGetTokenType = tokenStorage.getTokenType as jest.Mock;
 const mockRefreshToken = authApi.refreshToken as jest.Mock;
 
 // Store original fetch
@@ -48,6 +60,7 @@ describe('apiClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    mockSetUser.mockClear();
 
     // Create a mock fetch function
     mockFetch = jest.fn();
@@ -57,6 +70,7 @@ describe('apiClient', () => {
     mockGetAccessToken.mockResolvedValue(null);
     mockGetRefreshToken.mockResolvedValue(null);
     mockIsAccessTokenExpired.mockResolvedValue(false);
+    mockGetTokenType.mockResolvedValue('backend');
   });
 
   afterEach(() => {
@@ -175,6 +189,56 @@ describe('apiClient', () => {
       const callArgs = mockFetch.mock.calls[0];
       const headers = callArgs[1].headers;
       expect(headers['Authorization']).toBeUndefined();
+    });
+
+    it('should clear tokens and notify auth store for expired OAuth tokens', async () => {
+      mockGetAccessToken.mockResolvedValue('old-oauth-token');
+      mockIsAccessTokenExpired.mockResolvedValue(true);
+      mockGetTokenType.mockResolvedValue('oauth');
+      mockGetRefreshToken.mockResolvedValue('oauth-refresh-token');
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true, data: null, errors: [] }),
+      });
+
+      await apiClient.get('/public/endpoint');
+
+      // Should NOT attempt to refresh OAuth tokens via backend
+      expect(mockRefreshToken).not.toHaveBeenCalled();
+      // Should clear tokens when OAuth token is expired
+      expect(mockClearTokens).toHaveBeenCalled();
+      // Should notify auth store that user is logged out
+      expect(mockSetUser).toHaveBeenCalledWith(null);
+      // Request should proceed without Authorization header
+      const callArgs = mockFetch.mock.calls[0];
+      const headers = callArgs[1].headers;
+      expect(headers['Authorization']).toBeUndefined();
+    });
+
+    it('should use valid OAuth token without attempting refresh', async () => {
+      mockGetAccessToken.mockResolvedValue('valid-oauth-token');
+      mockIsAccessTokenExpired.mockResolvedValue(false);
+      mockGetTokenType.mockResolvedValue('oauth');
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true, data: { id: '123' }, errors: [] }),
+      });
+
+      await apiClient.get('/users/me');
+
+      expect(mockRefreshToken).not.toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer valid-oauth-token',
+          }),
+        })
+      );
     });
   });
 

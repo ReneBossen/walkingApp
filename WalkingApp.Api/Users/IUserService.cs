@@ -53,4 +53,26 @@ public interface IUserService
     /// <param name="contentType">The MIME content type of the file.</param>
     /// <returns>The avatar upload response containing the new URL.</returns>
     Task<AvatarUploadResponse> UploadAvatarAsync(Guid userId, Stream fileStream, string fileName, string contentType);
+
+    /// <summary>
+    /// Gets user statistics including friends count, groups count, and badges count.
+    /// </summary>
+    /// <param name="userId">The user ID to get stats for.</param>
+    /// <returns>The user statistics response.</returns>
+    Task<UserStatsResponse> GetUserStatsAsync(Guid userId);
+
+    /// <summary>
+    /// Gets weekly activity summary including total steps, distance, average, and streak.
+    /// </summary>
+    /// <param name="userId">The user ID to get activity for.</param>
+    /// <returns>The user activity response.</returns>
+    Task<UserActivityResponse> GetUserActivityAsync(Guid userId);
+
+    /// <summary>
+    /// Gets groups that are shared between the current user and another user.
+    /// </summary>
+    /// <param name="currentUserId">The current authenticated user ID.</param>
+    /// <param name="otherUserId">The other user ID to find mutual groups with.</param>
+    /// <returns>List of mutual groups.</returns>
+    Task<List<MutualGroupResponse>> GetMutualGroupsAsync(Guid currentUserId, Guid otherUserId);
 }

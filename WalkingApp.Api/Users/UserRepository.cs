@@ -1,4 +1,5 @@
 using Supabase;
+using WalkingApp.Api.Common.Constants;
 using WalkingApp.Api.Common.Database;
 
 namespace WalkingApp.Api.Users;
@@ -97,6 +98,108 @@ public class UserRepository : IUserRepository
             .Get();
 
         return response.Models.Select(e => e.ToUser()).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<int> GetFriendsCountAsync(Guid userId)
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        // Count friendships where user is requester with status='accepted'
+        var asRequester = await client
+            .From<FriendshipQueryEntity>()
+            .Where(x => x.RequesterId == userId && x.Status == FriendshipStatusStrings.Accepted)
+            .Get();
+
+        // Count friendships where user is addressee with status='accepted'
+        var asAddressee = await client
+            .From<FriendshipQueryEntity>()
+            .Where(x => x.AddresseeId == userId && x.Status == FriendshipStatusStrings.Accepted)
+            .Get();
+
+        return asRequester.Models.Count + asAddressee.Models.Count;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> GetGroupsCountAsync(Guid userId)
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        var response = await client
+            .From<GroupMembershipQueryEntity>()
+            .Where(x => x.UserId == userId)
+            .Get();
+
+        return response.Models.Count;
+    }
+
+    /// <inheritdoc />
+    public async Task<List<(int StepCount, double? DistanceMeters, DateOnly Date)>> GetStepEntriesForRangeAsync(
+        Guid userId,
+        DateOnly startDate,
+        DateOnly endDate)
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        var response = await client
+            .From<StepEntryQueryEntity>()
+            .Where(x => x.UserId == userId && x.Date >= startDate && x.Date <= endDate)
+            .Get();
+
+        return response.Models
+            .Select(e => (e.StepCount, e.DistanceMeters, e.Date))
+            .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<List<DateOnly>> GetActivityDatesAsync(Guid userId)
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        var response = await client
+            .From<StepEntryQueryEntity>()
+            .Where(x => x.UserId == userId)
+            .Order("date", Supabase.Postgrest.Constants.Ordering.Descending)
+            .Get();
+
+        // Get distinct dates ordered descending
+        return response.Models
+            .Select(e => e.Date)
+            .Distinct()
+            .OrderByDescending(d => d)
+            .ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<List<Guid>> GetUserGroupIdsAsync(Guid userId)
+    {
+        var client = await GetAuthenticatedClientAsync();
+
+        var response = await client
+            .From<GroupMembershipQueryEntity>()
+            .Where(x => x.UserId == userId)
+            .Get();
+
+        return response.Models.Select(m => m.GroupId).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<List<(Guid Id, string Name)>> GetGroupsByIdsAsync(List<Guid> groupIds)
+    {
+        if (groupIds.Count == 0)
+        {
+            return new List<(Guid, string)>();
+        }
+
+        var client = await GetAuthenticatedClientAsync();
+
+        var idsString = string.Join(",", groupIds);
+        var response = await client
+            .From<GroupQueryEntity>()
+            .Filter("id", Supabase.Postgrest.Constants.Operator.In, $"({idsString})")
+            .Get();
+
+        return response.Models.Select(g => (g.Id, g.Name)).ToList();
     }
 
     private async Task<Client> GetAuthenticatedClientAsync()

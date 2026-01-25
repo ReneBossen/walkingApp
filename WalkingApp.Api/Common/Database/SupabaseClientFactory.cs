@@ -28,7 +28,9 @@ public class SupabaseClientFactory : ISupabaseClientFactory
 
         var options = new SupabaseOptions
         {
-            AutoConnectRealtime = true,
+            // Disable auto-connect to Realtime websockets - causes 403 errors when using
+            // per-request JWT tokens since Realtime requires a persistent connection
+            AutoConnectRealtime = false,
             Headers = new Dictionary<string, string>
             {
                 { "Authorization", $"Bearer {jwtToken}" }
@@ -46,6 +48,8 @@ public class SupabaseClientFactory : ISupabaseClientFactory
     {
         var options = new SupabaseOptions
         {
+            // Disable auto-connect to Realtime websockets - causes 403 errors when using
+            // per-request JWT tokens since Realtime requires a persistent connection
             AutoConnectRealtime = false
         };
 

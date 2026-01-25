@@ -52,7 +52,7 @@ describe('notificationsApi', () => {
 
       const result = await notificationsApi.getNotifications();
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/notifications?limit=50&offset=0');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/notifications?limit=50&offset=0');
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
         id: 'notif-1',
@@ -176,7 +176,7 @@ describe('notificationsApi', () => {
 
       const result = await notificationsApi.getUnreadCount();
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/notifications/unread/count');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/notifications/unread/count');
       expect(result).toBe(5);
     });
 
@@ -202,7 +202,7 @@ describe('notificationsApi', () => {
 
       await notificationsApi.markAsRead('notif-123');
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/notifications/notif-123/read');
+      expect(mockApiClient.put).toHaveBeenCalledWith('/notifications/notif-123/read');
     });
 
     it('should throw error when update fails', async () => {
@@ -217,7 +217,7 @@ describe('notificationsApi', () => {
 
       await notificationsApi.markAsRead('specific-notif-id');
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/notifications/specific-notif-id/read');
+      expect(mockApiClient.put).toHaveBeenCalledWith('/notifications/specific-notif-id/read');
     });
   });
 
@@ -227,7 +227,7 @@ describe('notificationsApi', () => {
 
       await notificationsApi.markAllAsRead();
 
-      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/notifications/read-all');
+      expect(mockApiClient.put).toHaveBeenCalledWith('/notifications/read-all');
     });
 
     it('should throw error when update fails', async () => {
@@ -244,7 +244,7 @@ describe('notificationsApi', () => {
 
       await notificationsApi.deleteNotification('notif-123');
 
-      expect(mockApiClient.delete).toHaveBeenCalledWith('/api/v1/notifications/notif-123');
+      expect(mockApiClient.delete).toHaveBeenCalledWith('/notifications/notif-123');
     });
 
     it('should throw error when delete fails', async () => {
@@ -259,7 +259,7 @@ describe('notificationsApi', () => {
 
       await notificationsApi.deleteNotification('specific-notif-id');
 
-      expect(mockApiClient.delete).toHaveBeenCalledWith('/api/v1/notifications/specific-notif-id');
+      expect(mockApiClient.delete).toHaveBeenCalledWith('/notifications/specific-notif-id');
     });
   });
 });

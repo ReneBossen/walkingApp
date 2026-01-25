@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WalkingApp.Api.Common.Extensions;
 using WalkingApp.Api.Common.Models;
@@ -9,6 +10,7 @@ namespace WalkingApp.Api.Steps;
 /// Controller for step tracking endpoints.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/v1/steps")]
 public class StepsController : ControllerBase
 {
