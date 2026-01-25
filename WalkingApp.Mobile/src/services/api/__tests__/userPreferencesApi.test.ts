@@ -1,244 +1,275 @@
 import { userPreferencesApi, UserPreferences, DEFAULT_PREFERENCES } from '../userPreferencesApi';
-import { supabase } from '@services/supabase';
+import { apiClient } from '../client';
 
-// Mock the supabase client
-const mockGetUser = jest.fn();
-
-jest.mock('@services/supabase', () => ({
-  supabase: {
-    from: jest.fn(),
-    auth: {
-      getUser: () => mockGetUser(),
-    },
+// Mock the apiClient
+jest.mock('../client', () => ({
+  apiClient: {
+    get: jest.fn(),
+    put: jest.fn(),
   },
 }));
 
-const mockSupabase = supabase as jest.Mocked<typeof supabase>;
+const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
 
 describe('userPreferencesApi', () => {
-  const mockPreferences: UserPreferences = {
+  // Backend response format (camelCase, simplified)
+  const mockBackendPreferences = {
+    notificationsEnabled: true,
+    dailyStepGoal: 10000,
+    distanceUnit: 'metric',
+    privateProfile: false,
+  };
+
+  // Backend profile response (for getting user ID)
+  const mockBackendProfile = {
     id: '123',
-    daily_step_goal: 10000,
-    units: 'metric',
-    notifications_enabled: true,
-    notify_friend_requests: true,
-    notify_friend_accepted: true,
-    notify_friend_milestones: true,
-    notify_group_invites: true,
-    notify_leaderboard_updates: false,
-    notify_competition_reminders: true,
-    notify_goal_achieved: true,
-    notify_streak_reminders: true,
-    notify_weekly_summary: true,
-    privacy_profile_visibility: 'public',
-    privacy_find_me: 'public',
-    privacy_show_steps: 'partial',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
+    displayName: 'Test User',
+    avatarUrl: 'https://example.com/avatar.jpg',
+    onboardingCompleted: true,
+    createdAt: '2024-01-01T00:00:00Z',
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default mock for authenticated user
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: '123' } },
-      error: null,
-    });
   });
 
   describe('getPreferences', () => {
-    it('should fetch preferences successfully', async () => {
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockEq = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: mockPreferences,
-        error: null,
-      });
-
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        select: mockSelect,
-      });
-
-      mockSelect.mockReturnValue({
-        eq: mockEq,
-      });
-
-      mockEq.mockReturnValue({
-        single: mockSingle,
-      });
+    it('should fetch preferences successfully via backend API', async () => {
+      mockApiClient.get
+        .mockResolvedValueOnce(mockBackendPreferences) // preferences call
+        .mockResolvedValueOnce(mockBackendProfile); // profile call for user ID
 
       const result = await userPreferencesApi.getPreferences();
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('user_preferences');
-      expect(mockSelect).toHaveBeenCalledWith('*');
-      expect(mockEq).toHaveBeenCalledWith('id', '123');
-      expect(mockSingle).toHaveBeenCalled();
-      expect(result).toEqual(mockPreferences);
-    });
-
-    it('should return default preferences when no record exists', async () => {
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockEq = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: null,
-        error: { code: 'PGRST116', message: 'No rows found' },
-      });
-
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        select: mockSelect,
-      });
-
-      mockSelect.mockReturnValue({
-        eq: mockEq,
-      });
-
-      mockEq.mockReturnValue({
-        single: mockSingle,
-      });
-
-      const result = await userPreferencesApi.getPreferences();
-
+      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/me/preferences');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/api/v1/users/me');
       expect(result.id).toBe('123');
-      expect(result.daily_step_goal).toBe(DEFAULT_PREFERENCES.daily_step_goal);
-      expect(result.units).toBe(DEFAULT_PREFERENCES.units);
-      expect(result.notifications_enabled).toBe(DEFAULT_PREFERENCES.notifications_enabled);
-      expect(result.privacy_find_me).toBe(DEFAULT_PREFERENCES.privacy_find_me);
-      expect(result.privacy_show_steps).toBe(DEFAULT_PREFERENCES.privacy_show_steps);
+      expect(result.daily_step_goal).toBe(10000);
+      expect(result.units).toBe('metric');
+      expect(result.notifications_enabled).toBe(true);
     });
 
-    it('should throw error for non-404 errors', async () => {
-      const mockError = { code: 'UNEXPECTED', message: 'Database error' };
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockEq = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: null,
-        error: mockError,
-      });
+    it('should map backend camelCase to mobile snake_case format', async () => {
+      mockApiClient.get
+        .mockResolvedValueOnce({
+          notificationsEnabled: false,
+          dailyStepGoal: 15000,
+          distanceUnit: 'imperial',
+          privateProfile: true,
+        })
+        .mockResolvedValueOnce({ id: '456' });
 
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        select: mockSelect,
-      });
+      const result = await userPreferencesApi.getPreferences();
 
-      mockSelect.mockReturnValue({
-        eq: mockEq,
+      expect(result).toMatchObject({
+        id: '456',
+        daily_step_goal: 15000,
+        units: 'imperial',
+        notifications_enabled: false,
+        privacy_profile_visibility: 'private',
+        privacy_find_me: 'private',
+        privacy_show_steps: 'private',
       });
-
-      mockEq.mockReturnValue({
-        single: mockSingle,
-      });
-
-      await expect(userPreferencesApi.getPreferences()).rejects.toEqual(mockError);
     });
 
-    it('should throw error when user is not authenticated', async () => {
-      mockGetUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
-      });
+    it('should derive granular notification settings from master toggle', async () => {
+      mockApiClient.get
+        .mockResolvedValueOnce({ ...mockBackendPreferences, notificationsEnabled: true })
+        .mockResolvedValueOnce(mockBackendProfile);
 
-      await expect(userPreferencesApi.getPreferences()).rejects.toThrow('User not authenticated');
+      const result = await userPreferencesApi.getPreferences();
+
+      // When notifications are enabled, all granular settings should be true
+      expect(result.notify_friend_requests).toBe(true);
+      expect(result.notify_friend_accepted).toBe(true);
+      expect(result.notify_friend_milestones).toBe(true);
+      expect(result.notify_group_invites).toBe(true);
+      expect(result.notify_leaderboard_updates).toBe(false); // Always false by default
+      expect(result.notify_competition_reminders).toBe(true);
+      expect(result.notify_goal_achieved).toBe(true);
+      expect(result.notify_streak_reminders).toBe(true);
+      expect(result.notify_weekly_summary).toBe(true);
+    });
+
+    it('should derive privacy settings from privateProfile flag', async () => {
+      mockApiClient.get
+        .mockResolvedValueOnce({ ...mockBackendPreferences, privateProfile: false })
+        .mockResolvedValueOnce(mockBackendProfile);
+
+      const result = await userPreferencesApi.getPreferences();
+
+      expect(result.privacy_profile_visibility).toBe('public');
+      expect(result.privacy_find_me).toBe('public');
+      expect(result.privacy_show_steps).toBe('partial'); // Default for non-private
+    });
+
+    it('should throw error when API call fails', async () => {
+      const apiError = new Error('Network error');
+      mockApiClient.get.mockRejectedValue(apiError);
+
+      await expect(userPreferencesApi.getPreferences()).rejects.toThrow('Network error');
     });
   });
 
   describe('updatePreferences', () => {
-    it('should update preferences successfully', async () => {
+    it('should update preferences successfully via backend API', async () => {
       const updates = { daily_step_goal: 12000, units: 'imperial' as const };
-      const updatedPrefs = { ...mockPreferences, ...updates };
 
-      const mockUpsert = jest.fn().mockReturnThis();
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: updatedPrefs,
-        error: null,
+      mockApiClient.put.mockResolvedValue({
+        notificationsEnabled: true,
+        dailyStepGoal: 12000,
+        distanceUnit: 'imperial',
+        privateProfile: false,
       });
-
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        upsert: mockUpsert,
-      });
-
-      mockUpsert.mockReturnValue({
-        select: mockSelect,
-      });
-
-      mockSelect.mockReturnValue({
-        single: mockSingle,
-      });
+      mockApiClient.get.mockResolvedValue(mockBackendProfile);
 
       const result = await userPreferencesApi.updatePreferences(updates);
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('user_preferences');
-      expect(mockUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: '123',
-          daily_step_goal: 12000,
-          units: 'imperial',
-        }),
-        { onConflict: 'id' }
-      );
-      expect(result).toEqual(updatedPrefs);
+      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+        dailyStepGoal: 12000,
+        distanceUnit: 'imperial',
+      });
+      expect(result.daily_step_goal).toBe(12000);
+      expect(result.units).toBe('imperial');
     });
 
-    it('should update privacy settings', async () => {
-      const updates = { privacy_find_me: 'private' as const, privacy_show_steps: 'private' as const };
-      const updatedPrefs = { ...mockPreferences, ...updates };
+    it('should map notifications_enabled to backend format', async () => {
+      mockApiClient.put.mockResolvedValue({
+        ...mockBackendPreferences,
+        notificationsEnabled: false,
+      });
+      mockApiClient.get.mockResolvedValue(mockBackendProfile);
 
-      const mockUpsert = jest.fn().mockReturnThis();
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: updatedPrefs,
-        error: null,
+      await userPreferencesApi.updatePreferences({ notifications_enabled: false });
+
+      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+        notificationsEnabled: false,
+      });
+    });
+
+    it('should map privacy settings to privateProfile flag', async () => {
+      mockApiClient.put.mockResolvedValue({
+        ...mockBackendPreferences,
+        privateProfile: true,
+      });
+      mockApiClient.get.mockResolvedValue(mockBackendProfile);
+
+      await userPreferencesApi.updatePreferences({ privacy_find_me: 'private' });
+
+      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+        privateProfile: true,
+      });
+    });
+
+    it('should preserve granular notification settings in response', async () => {
+      mockApiClient.put.mockResolvedValue(mockBackendPreferences);
+      mockApiClient.get.mockResolvedValue(mockBackendProfile);
+
+      const result = await userPreferencesApi.updatePreferences({
+        notify_friend_requests: false,
+        notify_weekly_summary: false,
       });
 
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        upsert: mockUpsert,
+      // These should be overridden with the values passed in the update
+      expect(result.notify_friend_requests).toBe(false);
+      expect(result.notify_weekly_summary).toBe(false);
+    });
+
+    it('should preserve granular privacy settings in response', async () => {
+      mockApiClient.put.mockResolvedValue({
+        ...mockBackendPreferences,
+        privateProfile: true,
+      });
+      mockApiClient.get.mockResolvedValue(mockBackendProfile);
+
+      const result = await userPreferencesApi.updatePreferences({
+        privacy_profile_visibility: 'partial',
+        privacy_find_me: 'private',
+        privacy_show_steps: 'partial',
       });
 
-      mockUpsert.mockReturnValue({
-        select: mockSelect,
-      });
-
-      mockSelect.mockReturnValue({
-        single: mockSingle,
-      });
-
-      const result = await userPreferencesApi.updatePreferences(updates);
-
+      // These should be overridden with the values passed in the update
+      expect(result.privacy_profile_visibility).toBe('partial');
       expect(result.privacy_find_me).toBe('private');
-      expect(result.privacy_show_steps).toBe('private');
+      expect(result.privacy_show_steps).toBe('partial');
     });
 
     it('should throw error when update fails', async () => {
-      const mockError = { message: 'Update failed' };
+      const apiError = new Error('Update failed');
+      mockApiClient.put.mockRejectedValue(apiError);
 
-      const mockUpsert = jest.fn().mockReturnThis();
-      const mockSelect = jest.fn().mockReturnThis();
-      const mockSingle = jest.fn().mockResolvedValue({
-        data: null,
-        error: mockError,
-      });
-
-      (mockSupabase.from as jest.Mock).mockReturnValue({
-        upsert: mockUpsert,
-      });
-
-      mockUpsert.mockReturnValue({
-        select: mockSelect,
-      });
-
-      mockSelect.mockReturnValue({
-        single: mockSingle,
-      });
-
-      await expect(userPreferencesApi.updatePreferences({ daily_step_goal: 15000 })).rejects.toEqual(mockError);
+      await expect(userPreferencesApi.updatePreferences({ daily_step_goal: 15000 })).rejects.toThrow('Update failed');
     });
 
-    it('should throw error when user is not authenticated', async () => {
-      mockGetUser.mockResolvedValue({
-        data: { user: null },
-        error: null,
+    it('should handle empty update object', async () => {
+      mockApiClient.put.mockResolvedValue(mockBackendPreferences);
+      mockApiClient.get.mockResolvedValue(mockBackendProfile);
+
+      const result = await userPreferencesApi.updatePreferences({});
+
+      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {});
+      expect(result.id).toBe('123');
+    });
+
+    it('should correctly determine privateProfile from multiple privacy settings', async () => {
+      mockApiClient.put.mockResolvedValue({
+        ...mockBackendPreferences,
+        privateProfile: false,
+      });
+      mockApiClient.get.mockResolvedValue(mockBackendProfile);
+
+      // All set to public - privateProfile should be false
+      await userPreferencesApi.updatePreferences({
+        privacy_profile_visibility: 'public',
+        privacy_find_me: 'public',
+        privacy_show_steps: 'public',
       });
 
-      await expect(userPreferencesApi.updatePreferences({ daily_step_goal: 15000 })).rejects.toThrow('User not authenticated');
+      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+        privateProfile: false,
+      });
+    });
+
+    it('should set privateProfile true if any privacy setting is private', async () => {
+      mockApiClient.put.mockResolvedValue({
+        ...mockBackendPreferences,
+        privateProfile: true,
+      });
+      mockApiClient.get.mockResolvedValue(mockBackendProfile);
+
+      // One setting is private - privateProfile should be true
+      await userPreferencesApi.updatePreferences({
+        privacy_profile_visibility: 'public',
+        privacy_find_me: 'public',
+        privacy_show_steps: 'private',
+      });
+
+      expect(mockApiClient.put).toHaveBeenCalledWith('/api/v1/users/me/preferences', {
+        privateProfile: true,
+      });
+    });
+  });
+
+  describe('DEFAULT_PREFERENCES', () => {
+    it('should have correct default values', () => {
+      expect(DEFAULT_PREFERENCES.daily_step_goal).toBe(10000);
+      expect(DEFAULT_PREFERENCES.units).toBe('metric');
+      expect(DEFAULT_PREFERENCES.notifications_enabled).toBe(true);
+      expect(DEFAULT_PREFERENCES.privacy_profile_visibility).toBe('public');
+      expect(DEFAULT_PREFERENCES.privacy_find_me).toBe('public');
+      expect(DEFAULT_PREFERENCES.privacy_show_steps).toBe('partial');
+    });
+
+    it('should have all required notification settings', () => {
+      expect(DEFAULT_PREFERENCES.notify_friend_requests).toBe(true);
+      expect(DEFAULT_PREFERENCES.notify_friend_accepted).toBe(true);
+      expect(DEFAULT_PREFERENCES.notify_friend_milestones).toBe(true);
+      expect(DEFAULT_PREFERENCES.notify_group_invites).toBe(true);
+      expect(DEFAULT_PREFERENCES.notify_leaderboard_updates).toBe(false);
+      expect(DEFAULT_PREFERENCES.notify_competition_reminders).toBe(true);
+      expect(DEFAULT_PREFERENCES.notify_goal_achieved).toBe(true);
+      expect(DEFAULT_PREFERENCES.notify_streak_reminders).toBe(true);
+      expect(DEFAULT_PREFERENCES.notify_weekly_summary).toBe(true);
     });
   });
 });
