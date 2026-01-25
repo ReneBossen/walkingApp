@@ -232,4 +232,109 @@ public class UsersController : ControllerBase
             return StatusCode(500, ApiResponse<AvatarUploadResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
         }
     }
+
+    /// <summary>
+    /// Gets user statistics including friends count, groups count, and badges count.
+    /// </summary>
+    /// <param name="id">The user ID.</param>
+    /// <returns>The user statistics.</returns>
+    [HttpGet("{id}/stats")]
+    public async Task<ActionResult<ApiResponse<UserStatsResponse>>> GetUserStats(Guid id)
+    {
+        var currentUserId = User.GetUserId();
+
+        if (currentUserId == null)
+        {
+            return Unauthorized(ApiResponse<UserStatsResponse>.ErrorResponse("User is not authenticated."));
+        }
+
+        if (id == Guid.Empty)
+        {
+            return BadRequest(ApiResponse<UserStatsResponse>.ErrorResponse("User ID cannot be empty."));
+        }
+
+        try
+        {
+            var stats = await _userService.GetUserStatsAsync(id);
+            return Ok(ApiResponse<UserStatsResponse>.SuccessResponse(stats));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse<UserStatsResponse>.ErrorResponse(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<UserStatsResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets weekly activity summary for a user.
+    /// </summary>
+    /// <param name="id">The user ID.</param>
+    /// <returns>The weekly activity summary.</returns>
+    [HttpGet("{id}/activity")]
+    public async Task<ActionResult<ApiResponse<UserActivityResponse>>> GetUserActivity(Guid id)
+    {
+        var currentUserId = User.GetUserId();
+
+        if (currentUserId == null)
+        {
+            return Unauthorized(ApiResponse<UserActivityResponse>.ErrorResponse("User is not authenticated."));
+        }
+
+        if (id == Guid.Empty)
+        {
+            return BadRequest(ApiResponse<UserActivityResponse>.ErrorResponse("User ID cannot be empty."));
+        }
+
+        try
+        {
+            var activity = await _userService.GetUserActivityAsync(id);
+            return Ok(ApiResponse<UserActivityResponse>.SuccessResponse(activity));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse<UserActivityResponse>.ErrorResponse(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<UserActivityResponse>.ErrorResponse($"An error occurred: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets groups that are shared between the current user and another user.
+    /// </summary>
+    /// <param name="id">The other user ID.</param>
+    /// <returns>List of mutual groups.</returns>
+    [HttpGet("{id}/mutual-groups")]
+    public async Task<ActionResult<ApiResponse<List<MutualGroupResponse>>>> GetMutualGroups(Guid id)
+    {
+        var currentUserId = User.GetUserId();
+
+        if (currentUserId == null)
+        {
+            return Unauthorized(ApiResponse<List<MutualGroupResponse>>.ErrorResponse("User is not authenticated."));
+        }
+
+        if (id == Guid.Empty)
+        {
+            return BadRequest(ApiResponse<List<MutualGroupResponse>>.ErrorResponse("User ID cannot be empty."));
+        }
+
+        try
+        {
+            var mutualGroups = await _userService.GetMutualGroupsAsync(currentUserId.Value, id);
+            return Ok(ApiResponse<List<MutualGroupResponse>>.SuccessResponse(mutualGroups));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse<List<MutualGroupResponse>>.ErrorResponse(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<List<MutualGroupResponse>>.ErrorResponse($"An error occurred: {ex.Message}"));
+        }
+    }
 }
