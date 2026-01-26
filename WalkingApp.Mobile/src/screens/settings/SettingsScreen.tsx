@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Alert, Linking, Platform } from 'react-native';
 import {
+  Appbar,
   Text,
   List,
   Divider,
@@ -315,223 +316,228 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Account Section */}
-      <View style={styles.section}>
-        <Text
-          variant="titleSmall"
-          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          Account
-        </Text>
-        <List.Item
-          title="Profile"
-          description={currentUser?.display_name || 'Edit your profile'}
-          left={(props) => <List.Icon {...props} icon="account" />}
-          right={(props) => <List.Icon {...props} icon="chevron-right" />}
-          onPress={handleProfilePress}
-          style={styles.listItem}
-          accessibilityLabel="Go to profile"
-          testID="settings-profile"
-        />
-        <List.Item
-          title="Email"
-          description={userEmail || 'Loading...'}
-          left={(props) => <List.Icon {...props} icon="email" />}
-          style={styles.listItem}
-          accessibilityLabel={`Email: ${userEmail || 'Loading'}`}
-          testID="settings-email"
-        />
-        <List.Item
-          title="Change Password"
-          left={(props) => <List.Icon {...props} icon="lock" />}
-          right={(props) => <List.Icon {...props} icon="chevron-right" />}
-          onPress={handleChangePasswordPress}
-          style={styles.listItem}
-          accessibilityLabel="Change password"
-          testID="settings-change-password"
-        />
-      </View>
-
-      <Divider style={styles.divider} />
-
-      {/* Preferences Section */}
-      <View style={styles.section}>
-        <Text
-          variant="titleSmall"
-          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          Preferences
-        </Text>
-        <List.Item
-          title="Units"
-          description={getUnitsLabel()}
-          left={(props) => <List.Icon {...props} icon="ruler" />}
-          right={(props) => <List.Icon {...props} icon="chevron-right" />}
-          onPress={handleUnitsPress}
-          style={styles.listItem}
-          accessibilityLabel={`Units: ${getUnitsLabel()}`}
-          testID="settings-units"
-        />
-        <List.Item
-          title="Daily Step Goal"
-          description={getGoalLabel()}
-          left={(props) => <List.Icon {...props} icon="target" />}
-          right={(props) => <List.Icon {...props} icon="chevron-right" />}
-          onPress={handleGoalPress}
-          style={styles.listItem}
-          accessibilityLabel={`Daily step goal: ${getGoalLabel()}`}
-          testID="settings-daily-goal"
-        />
-        <List.Item
-          title="Theme"
-          description={getThemeLabel()}
-          left={(props) => <List.Icon {...props} icon="palette" />}
-          right={(props) => <List.Icon {...props} icon="chevron-right" />}
-          onPress={handleThemePress}
-          style={styles.listItem}
-          accessibilityLabel={`Theme: ${getThemeLabel()}`}
-          testID="settings-theme"
-        />
-      </View>
-
-      <Divider style={styles.divider} />
-
-      {/* Notifications Section */}
-      <View style={styles.section}>
-        <Text
-          variant="titleSmall"
-          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          Notifications
-        </Text>
-        <View style={styles.switchRow}>
-          <View style={styles.switchContent}>
-            <List.Icon icon="bell" />
-            <View style={styles.switchText}>
-              <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
-                Push Notifications
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={notificationsEnabled}
-            onValueChange={handleNotificationToggle}
-            disabled={isTogglingNotifications}
-            testID="settings-notifications-switch"
-            accessibilityLabel={`Push notifications toggle, currently ${notificationsEnabled ? 'enabled' : 'disabled'}`}
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Appbar.Header elevated>
+        <Appbar.Content title="Settings" />
+      </Appbar.Header>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Account Section */}
+        <View style={styles.section}>
+          <Text
+            variant="titleSmall"
+            style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Account
+          </Text>
+          <List.Item
+            title="Profile"
+            description={currentUser?.display_name || 'Edit your profile'}
+            left={(props) => <List.Icon {...props} icon="account" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={handleProfilePress}
+            style={styles.listItem}
+            accessibilityLabel="Go to profile"
+            testID="settings-profile"
+          />
+          <List.Item
+            title="Email"
+            description={userEmail || 'Loading...'}
+            left={(props) => <List.Icon {...props} icon="email" />}
+            style={styles.listItem}
+            accessibilityLabel={`Email: ${userEmail || 'Loading'}`}
+            testID="settings-email"
+          />
+          <List.Item
+            title="Change Password"
+            left={(props) => <List.Icon {...props} icon="lock" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={handleChangePasswordPress}
+            style={styles.listItem}
+            accessibilityLabel="Change password"
+            testID="settings-change-password"
           />
         </View>
-        <List.Item
-          title="Notification Settings"
-          description="Configure notification types"
-          left={(props) => <List.Icon {...props} icon="bell-cog" />}
-          right={(props) => <List.Icon {...props} icon="chevron-right" />}
-          onPress={handleNotificationSettingsPress}
-          style={styles.listItem}
-          accessibilityLabel="Configure notification settings"
-          testID="settings-notification-settings"
-        />
-      </View>
 
-      <Divider style={styles.divider} />
+        <Divider style={styles.divider} />
 
-      {/* Privacy Section */}
-      <View style={styles.section}>
-        <Text
-          variant="titleSmall"
-          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          Privacy
-        </Text>
-        <List.Item
-          title="Profile Visibility"
-          description={getPrivacyLabel(privacyProfileVisibility)}
-          left={(props) => <List.Icon {...props} icon="account-eye" />}
-          right={(props) => <List.Icon {...props} icon="chevron-right" />}
-          onPress={() => handlePrivacyPress('profile_visibility')}
-          style={styles.listItem}
-          accessibilityLabel={`Profile visibility: ${getPrivacyLabel(privacyProfileVisibility)}`}
-          testID="settings-profile-visibility"
-        />
-        <List.Item
-          title="Activity Visibility"
-          description={getPrivacyLabel(privacyShowSteps)}
-          left={(props) => <List.Icon {...props} icon="chart-line" />}
-          right={(props) => <List.Icon {...props} icon="chevron-right" />}
-          onPress={() => handlePrivacyPress('activity_visibility')}
-          style={styles.listItem}
-          accessibilityLabel={`Activity visibility: ${getPrivacyLabel(privacyShowSteps)}`}
-          testID="settings-activity-visibility"
-        />
-        <List.Item
-          title="Who Can Find Me"
-          description={getPrivacyLabel(privacyFindMe)}
-          left={(props) => <List.Icon {...props} icon="magnify" />}
-          right={(props) => <List.Icon {...props} icon="chevron-right" />}
-          onPress={() => handlePrivacyPress('find_me')}
-          style={styles.listItem}
-          accessibilityLabel={`Who can find me: ${getPrivacyLabel(privacyFindMe)}`}
-          testID="settings-find-me"
-        />
-      </View>
+        {/* Preferences Section */}
+        <View style={styles.section}>
+          <Text
+            variant="titleSmall"
+            style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Preferences
+          </Text>
+          <List.Item
+            title="Units"
+            description={getUnitsLabel()}
+            left={(props) => <List.Icon {...props} icon="ruler" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={handleUnitsPress}
+            style={styles.listItem}
+            accessibilityLabel={`Units: ${getUnitsLabel()}`}
+            testID="settings-units"
+          />
+          <List.Item
+            title="Daily Step Goal"
+            description={getGoalLabel()}
+            left={(props) => <List.Icon {...props} icon="target" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={handleGoalPress}
+            style={styles.listItem}
+            accessibilityLabel={`Daily step goal: ${getGoalLabel()}`}
+            testID="settings-daily-goal"
+          />
+          <List.Item
+            title="Theme"
+            description={getThemeLabel()}
+            left={(props) => <List.Icon {...props} icon="palette" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={handleThemePress}
+            style={styles.listItem}
+            accessibilityLabel={`Theme: ${getThemeLabel()}`}
+            testID="settings-theme"
+          />
+        </View>
 
-      <Divider style={styles.divider} />
+        <Divider style={styles.divider} />
 
-      {/* About Section */}
-      <View style={styles.section}>
-        <Text
-          variant="titleSmall"
-          style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
-        >
-          About
-        </Text>
-        <List.Item
-          title="App Version"
-          description={APP_VERSION}
-          left={(props) => <List.Icon {...props} icon="information" />}
-          style={styles.listItem}
-          accessibilityLabel={`App version ${APP_VERSION}`}
-          testID="settings-app-version"
-        />
-        <List.Item
-          title="Terms of Service"
-          left={(props) => <List.Icon {...props} icon="file-document" />}
-          right={(props) => <List.Icon {...props} icon="open-in-new" />}
-          onPress={handleTermsPress}
-          style={styles.listItem}
-          accessibilityLabel="Open Terms of Service"
-          testID="settings-terms"
-        />
-        <List.Item
-          title="Privacy Policy"
-          left={(props) => <List.Icon {...props} icon="shield-lock" />}
-          right={(props) => <List.Icon {...props} icon="open-in-new" />}
-          onPress={handlePrivacyPolicyPress}
-          style={styles.listItem}
-          accessibilityLabel="Open Privacy Policy"
-          testID="settings-privacy-policy"
-        />
-      </View>
+        {/* Notifications Section */}
+        <View style={styles.section}>
+          <Text
+            variant="titleSmall"
+            style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Notifications
+          </Text>
+          <View style={styles.switchRow}>
+            <View style={styles.switchContent}>
+              <List.Icon icon="bell" />
+              <View style={styles.switchText}>
+                <Text variant="bodyLarge" style={{ color: theme.colors.onSurface }}>
+                  Push Notifications
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={handleNotificationToggle}
+              disabled={isTogglingNotifications}
+              testID="settings-notifications-switch"
+              accessibilityLabel={`Push notifications toggle, currently ${notificationsEnabled ? 'enabled' : 'disabled'}`}
+            />
+          </View>
+          <List.Item
+            title="Notification Settings"
+            description="Configure notification types"
+            left={(props) => <List.Icon {...props} icon="bell-cog" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={handleNotificationSettingsPress}
+            style={styles.listItem}
+            accessibilityLabel="Configure notification settings"
+            testID="settings-notification-settings"
+          />
+        </View>
 
-      <Divider style={styles.divider} />
+        <Divider style={styles.divider} />
 
-      {/* Sign Out Section */}
-      <View style={styles.section}>
-        <List.Item
-          title="Sign Out"
-          titleStyle={{ color: theme.colors.error }}
-          left={(props) => <List.Icon {...props} icon="logout" color={theme.colors.error} />}
-          onPress={handleSignOutPress}
-          style={styles.listItem}
-          accessibilityLabel="Sign out"
-          testID="settings-sign-out"
-        />
-      </View>
+        {/* Privacy Section */}
+        <View style={styles.section}>
+          <Text
+            variant="titleSmall"
+            style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Privacy
+          </Text>
+          <List.Item
+            title="Profile Visibility"
+            description={getPrivacyLabel(privacyProfileVisibility)}
+            left={(props) => <List.Icon {...props} icon="account-eye" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => handlePrivacyPress('profile_visibility')}
+            style={styles.listItem}
+            accessibilityLabel={`Profile visibility: ${getPrivacyLabel(privacyProfileVisibility)}`}
+            testID="settings-profile-visibility"
+          />
+          <List.Item
+            title="Activity Visibility"
+            description={getPrivacyLabel(privacyShowSteps)}
+            left={(props) => <List.Icon {...props} icon="chart-line" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => handlePrivacyPress('activity_visibility')}
+            style={styles.listItem}
+            accessibilityLabel={`Activity visibility: ${getPrivacyLabel(privacyShowSteps)}`}
+            testID="settings-activity-visibility"
+          />
+          <List.Item
+            title="Who Can Find Me"
+            description={getPrivacyLabel(privacyFindMe)}
+            left={(props) => <List.Icon {...props} icon="magnify" />}
+            right={(props) => <List.Icon {...props} icon="chevron-right" />}
+            onPress={() => handlePrivacyPress('find_me')}
+            style={styles.listItem}
+            accessibilityLabel={`Who can find me: ${getPrivacyLabel(privacyFindMe)}`}
+            testID="settings-find-me"
+          />
+        </View>
+
+        <Divider style={styles.divider} />
+
+        {/* About Section */}
+        <View style={styles.section}>
+          <Text
+            variant="titleSmall"
+            style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+          >
+            About
+          </Text>
+          <List.Item
+            title="App Version"
+            description={APP_VERSION}
+            left={(props) => <List.Icon {...props} icon="information" />}
+            style={styles.listItem}
+            accessibilityLabel={`App version ${APP_VERSION}`}
+            testID="settings-app-version"
+          />
+          <List.Item
+            title="Terms of Service"
+            left={(props) => <List.Icon {...props} icon="file-document" />}
+            right={(props) => <List.Icon {...props} icon="open-in-new" />}
+            onPress={handleTermsPress}
+            style={styles.listItem}
+            accessibilityLabel="Open Terms of Service"
+            testID="settings-terms"
+          />
+          <List.Item
+            title="Privacy Policy"
+            left={(props) => <List.Icon {...props} icon="shield-lock" />}
+            right={(props) => <List.Icon {...props} icon="open-in-new" />}
+            onPress={handlePrivacyPolicyPress}
+            style={styles.listItem}
+            accessibilityLabel="Open Privacy Policy"
+            testID="settings-privacy-policy"
+          />
+        </View>
+
+        <Divider style={styles.divider} />
+
+        {/* Sign Out Section */}
+        <View style={styles.section}>
+          <List.Item
+            title="Sign Out"
+            titleStyle={{ color: theme.colors.error }}
+            left={(props) => <List.Icon {...props} icon="logout" color={theme.colors.error} />}
+            onPress={handleSignOutPress}
+            style={styles.listItem}
+            accessibilityLabel="Sign out"
+            testID="settings-sign-out"
+          />
+        </View>
+      </ScrollView>
 
       {/* Modals */}
       <UnitsModal
@@ -588,12 +594,15 @@ export default function SettingsScreen() {
       >
         {snackbarMessage}
       </Snackbar>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  scrollView: {
     flex: 1,
   },
   content: {
