@@ -189,7 +189,16 @@ jest.mock('react-native-paper', () => {
     );
   };
 
+  const Appbar = {
+    Header: ({ children }: any) => <RN.View testID="appbar-header">{children}</RN.View>,
+    Content: ({ title }: any) => <RN.Text testID="appbar-title">{title}</RN.Text>,
+    Action: ({ icon, onPress, accessibilityLabel }: any) => (
+      <RN.TouchableOpacity testID={`appbar-action-${icon}`} onPress={onPress} accessibilityLabel={accessibilityLabel} />
+    ),
+  };
+
   return {
+    Appbar,
     Text: ({ children, variant, style }: any) => (
       <RN.Text style={style} testID={`text-${variant}`}>
         {children}

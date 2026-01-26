@@ -15,7 +15,7 @@ export default function SettingsStackNavigator() {
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ title: 'Settings' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Profile"
