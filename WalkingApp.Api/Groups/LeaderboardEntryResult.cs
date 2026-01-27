@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace WalkingApp.Api.Groups;
 
 /// <summary>
@@ -6,10 +8,21 @@ namespace WalkingApp.Api.Groups;
 /// </summary>
 internal class LeaderboardEntryResult
 {
+    [JsonPropertyName("rank")]
     public long Rank { get; set; }
+
+    [JsonPropertyName("user_id")]
     public Guid UserId { get; set; }
+
+    [JsonPropertyName("display_name")]
     public string DisplayName { get; set; } = string.Empty;
+
+    [JsonPropertyName("avatar_url")]
     public string? AvatarUrl { get; set; }
+
+    [JsonPropertyName("total_steps")]
     public long TotalSteps { get; set; }
+
+    [JsonPropertyName("total_distance_meters")]
     public double TotalDistanceMeters { get; set; }
 }
