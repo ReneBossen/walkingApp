@@ -12,6 +12,7 @@ export interface Group {
   competition_type: 'daily' | 'weekly' | 'monthly';
   is_private: boolean;
   member_count: number;
+  max_members: number;
   created_at: string;
 }
 
@@ -65,6 +66,8 @@ export interface CreateGroupData {
   description?: string;
   competition_type: 'daily' | 'weekly' | 'monthly';
   is_private: boolean;
+  /** Maximum number of members allowed (default 5, range 1-50) */
+  max_members?: number;
 }
 
 /**
@@ -91,6 +94,7 @@ export interface GroupManagementDetail {
   join_code?: string;
   created_by_id: string;
   member_count: number;
+  max_members: number;
   user_role?: 'owner' | 'admin' | 'member';
 }
 
@@ -102,6 +106,7 @@ export interface UpdateGroupData {
   description?: string;
   is_private?: boolean;
   require_approval?: boolean;
+  max_members?: number;
 }
 
 interface GroupsState {
@@ -129,6 +134,10 @@ interface GroupsState {
   isSearching: boolean;
   searchError: string | null;
 
+  // Featured groups state
+  featuredGroups: Group[];
+  isLoadingFeatured: boolean;
+
   // Legacy support (deprecated, use myGroups instead)
   groups: Group[];
   isLoading: boolean;
@@ -148,6 +157,7 @@ interface GroupsState {
   // Management actions
   fetchGroupDetails: (groupId: string) => Promise<void>;
   searchPublicGroups: (query: string) => Promise<void>;
+  fetchFeaturedGroups: () => Promise<void>;
   updateGroup: (groupId: string, data: UpdateGroupData) => Promise<void>;
   deleteGroup: (groupId: string) => Promise<void>;
   fetchMembers: (groupId: string) => Promise<void>;
@@ -188,6 +198,10 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
   publicGroups: [],
   isSearching: false,
   searchError: null,
+
+  // Featured groups state
+  featuredGroups: [],
+  isLoadingFeatured: false,
 
   // Legacy support
   groups: [],
@@ -343,6 +357,19 @@ export const useGroupsStore = create<GroupsState>((set, get) => ({
       set({ publicGroups, isSearching: false });
     } catch (error: unknown) {
       set({ searchError: getErrorMessage(error), isSearching: false });
+    }
+  },
+
+  /**
+   * Fetch featured/popular public groups.
+   */
+  fetchFeaturedGroups: async () => {
+    set({ isLoadingFeatured: true });
+    try {
+      const featuredGroups = await groupsApi.getPublicGroups(10);
+      set({ featuredGroups, isLoadingFeatured: false });
+    } catch (error: unknown) {
+      set({ isLoadingFeatured: false });
     }
   },
 

@@ -29,4 +29,9 @@ public class GroupSearchResponse
     /// Whether the group is public or private.
     /// </summary>
     public bool IsPublic { get; set; }
+
+    /// <summary>
+    /// Maximum number of members allowed in the group.
+    /// </summary>
+    public int MaxMembers { get; set; }
 }

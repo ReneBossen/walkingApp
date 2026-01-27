@@ -16,6 +16,7 @@ describe('groupsStore', () => {
       competition_type: 'daily',
       is_private: false,
       member_count: 15,
+      max_members: 5,
       created_at: '2024-01-01T00:00:00Z',
     },
     {
@@ -25,6 +26,7 @@ describe('groupsStore', () => {
       competition_type: 'weekly',
       is_private: true,
       member_count: 8,
+      max_members: 5,
       created_at: '2024-01-05T00:00:00Z',
     },
   ];
@@ -340,6 +342,7 @@ describe('groupsStore', () => {
       id: 'group-3',
       ...newGroupData,
       member_count: 1,
+      max_members: 5,
       created_at: '2024-01-15T00:00:00Z',
     };
 

@@ -39,6 +39,11 @@ public class GroupResponse
     public int MemberCount { get; set; }
 
     /// <summary>
+    /// Maximum number of members allowed in the group.
+    /// </summary>
+    public int MaxMembers { get; set; }
+
+    /// <summary>
     /// Join code for the group (only visible to admins/owners).
     /// </summary>
     public string? JoinCode { get; set; }

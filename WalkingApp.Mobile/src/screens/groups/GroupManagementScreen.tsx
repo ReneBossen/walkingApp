@@ -19,6 +19,7 @@ import {
   HelperText,
   Snackbar,
 } from 'react-native-paper';
+import Slider from '@react-native-community/slider';
 import * as Clipboard from 'expo-clipboard';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -59,6 +60,7 @@ export default function GroupManagementScreen({ route }: Props) {
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [requireApproval, setRequireApproval] = useState(false);
+  const [maxMembers, setMaxMembers] = useState('5');
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -90,6 +92,7 @@ export default function GroupManagementScreen({ route }: Props) {
       setDescription(managementGroup.description || '');
       setIsPrivate(managementGroup.is_private);
       setRequireApproval(managementGroup.require_approval);
+      setMaxMembers(String(managementGroup.max_members ?? 5));
       setHasChanges(false);
     }
   }, [managementGroup]);
@@ -146,6 +149,11 @@ export default function GroupManagementScreen({ route }: Props) {
     setHasChanges(true);
   }, []);
 
+  const handleMaxMembersChange = useCallback((value: string) => {
+    setMaxMembers(value);
+    setHasChanges(true);
+  }, []);
+
   const handleBack = useCallback(() => {
     if (hasChanges) {
       Alert.alert(
@@ -169,6 +177,12 @@ export default function GroupManagementScreen({ route }: Props) {
       return;
     }
 
+    const parsedMaxMembers = parseInt(maxMembers, 10) || 5;
+    if (parsedMaxMembers < 1 || parsedMaxMembers > 50) {
+      Alert.alert('Error', 'Max members must be between 1 and 50');
+      return;
+    }
+
     setIsSaving(true);
     try {
       await updateGroup(groupId, {
@@ -176,6 +190,7 @@ export default function GroupManagementScreen({ route }: Props) {
         description: description.trim() || undefined,
         is_private: isPrivate,
         require_approval: requireApproval,
+        max_members: parsedMaxMembers,
       });
       setHasChanges(false);
       Alert.alert('Success', 'Group settings saved successfully');
@@ -184,7 +199,7 @@ export default function GroupManagementScreen({ route }: Props) {
     } finally {
       setIsSaving(false);
     }
-  }, [groupId, name, description, isPrivate, requireApproval, validateName, validateDescription, updateGroup]);
+  }, [groupId, name, description, isPrivate, requireApproval, maxMembers, validateName, validateDescription, updateGroup]);
 
   const handleCopyInviteCode = useCallback(async () => {
     if (inviteCode) {
@@ -277,6 +292,7 @@ export default function GroupManagementScreen({ route }: Props) {
             icon="content-save"
             onPress={handleSave}
             disabled={isSaving}
+            color="#4CAF50"
             accessibilityLabel="Save changes"
           />
         )}
@@ -427,6 +443,56 @@ export default function GroupManagementScreen({ route }: Props) {
                 accessibilityLabel={`Require admin approval toggle, currently ${requireApproval ? 'enabled' : 'disabled'}`}
               />
             </View>
+          </View>
+
+          <Divider style={styles.divider} />
+
+          {/* Max Members Section */}
+          <View style={styles.section}>
+            <Text
+              variant="titleSmall"
+              style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Max Members
+            </Text>
+            <Text
+              variant="bodySmall"
+              style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}
+            >
+              Maximum number of members allowed (1-50)
+            </Text>
+            <Slider
+              minimumValue={1}
+              maximumValue={50}
+              step={1}
+              value={parseInt(maxMembers, 10) || 5}
+              onValueChange={(value: number) => {
+                const rounded = String(Math.round(value));
+                setMaxMembers(rounded);
+                setHasChanges(true);
+              }}
+              minimumTrackTintColor={theme.colors.primary}
+              maximumTrackTintColor={theme.colors.surfaceVariant}
+              thumbTintColor={theme.colors.primary}
+              style={styles.slider}
+              testID="max-members-slider"
+              accessibilityLabel="Maximum members slider"
+            />
+            <TextInput
+              label="Max Members"
+              value={maxMembers}
+              onChangeText={(text: string) => {
+                const numeric = text.replace(/[^0-9]/g, '');
+                setMaxMembers(numeric);
+                setHasChanges(true);
+              }}
+              mode="outlined"
+              style={styles.input}
+              keyboardType="number-pad"
+              maxLength={2}
+              testID="max-members-input"
+              accessibilityLabel="Maximum members input"
+            />
           </View>
 
           <Divider style={styles.divider} />
@@ -601,6 +667,9 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 4,
+  },
+  slider: {
+    marginBottom: 8,
   },
   readOnlyField: {
     padding: 16,

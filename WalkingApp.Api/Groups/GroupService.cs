@@ -49,6 +49,8 @@ public class GroupService : IGroupService
             throw new ArgumentException($"Group name must be between {MinGroupNameLength} and {MaxGroupNameLength} characters.");
         }
 
+        ValidateMaxMembers(request.MaxMembers);
+
         // Create the group
         var group = new Group
         {
@@ -60,7 +62,8 @@ public class GroupService : IGroupService
             JoinCode = request.IsPublic ? null : GenerateJoinCode(),
             PeriodType = request.PeriodType,
             CreatedAt = DateTime.UtcNow,
-            MemberCount = 0
+            MemberCount = 0,
+            MaxMembers = request.MaxMembers
         };
 
         var createdGroup = await _groupRepository.CreateAsync(group);
@@ -175,6 +178,12 @@ public class GroupService : IGroupService
             throw new UnauthorizedAccessException("Only group owners and admins can update the group.");
         }
 
+        if (request.MaxMembers.HasValue)
+        {
+            ValidateMaxMembers(request.MaxMembers.Value);
+            group.MaxMembers = request.MaxMembers.Value;
+        }
+
         // Update the group
         group.Name = request.Name.Trim();
         group.Description = request.Description?.Trim();
@@ -265,6 +274,9 @@ public class GroupService : IGroupService
                 throw new UnauthorizedAccessException("Invalid join code.");
             }
         }
+
+        // Enforce max members limit
+        await EnsureGroupNotFullAsync(group);
 
         // Add the user as a member
         var membership = new GroupMembership
@@ -595,6 +607,7 @@ public class GroupService : IGroupService
             IsPublic = group.IsPublic,
             PeriodType = group.PeriodType,
             MemberCount = group.MemberCount,
+            MaxMembers = group.MaxMembers,
             // Security: Only owners and admins can see join codes to prevent unauthorized sharing
             JoinCode = (role == MemberRole.Owner || role == MemberRole.Admin) ? group.JoinCode : null,
             Role = role,
@@ -651,14 +664,28 @@ public class GroupService : IGroupService
     }
 
     /// <inheritdoc />
-    public async Task<List<GroupSearchResponse>> SearchPublicGroupsAsync(string query, int limit)
+    public async Task<List<GroupSearchResponse>> SearchPublicGroupsAsync(Guid userId, string query, int limit)
     {
+        ValidateUserId(userId);
         ValidateSearchQuery(query);
         ValidateSearchLimit(limit);
 
         var groups = await _groupRepository.SearchPublicGroupsAsync(query, limit);
+        var filtered = await ExcludeUserGroups(userId, groups);
 
-        return groups.Select(MapToGroupSearchResponse).ToList();
+        return filtered.Select(MapToGroupSearchResponse).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task<List<GroupSearchResponse>> GetPublicGroupsAsync(Guid userId, int limit)
+    {
+        ValidateUserId(userId);
+        ValidateSearchLimit(limit);
+
+        var groups = await _groupRepository.GetPublicGroupsAsync(limit);
+        var filtered = await ExcludeUserGroups(userId, groups);
+
+        return filtered.Select(MapToGroupSearchResponse).ToList();
     }
 
     /// <inheritdoc />
@@ -671,6 +698,7 @@ public class GroupService : IGroupService
         EnsureGroupFoundByCode(group);
 
         await EnsureNotAlreadyMemberAsync(group!.Id, userId);
+        await EnsureGroupNotFullAsync(group);
 
         var membership = CreateMembershipForJoin(group!.Id, userId);
         await _groupRepository.AddMemberAsync(membership);
@@ -746,6 +774,19 @@ public class GroupService : IGroupService
     {
         if (targetUserId == Guid.Empty)
             throw new ArgumentException("Target user ID cannot be empty.", nameof(targetUserId));
+    }
+
+    private static void ValidateMaxMembers(int maxMembers)
+    {
+        if (maxMembers < 1 || maxMembers > 50)
+            throw new ArgumentException("Maximum members must be between 1 and 50.", nameof(maxMembers));
+    }
+
+    private async Task EnsureGroupNotFullAsync(Group group)
+    {
+        var memberCount = await _groupRepository.GetMemberCountAsync(group.Id);
+        if (memberCount >= group.MaxMembers)
+            throw new InvalidOperationException($"This group is full. Maximum members: {group.MaxMembers}");
     }
 
     private static void ValidateSearchQuery(string query)
@@ -853,6 +894,15 @@ public class GroupService : IGroupService
             throw new UnauthorizedAccessException("Only owners and admins can approve members.");
     }
 
+    private async Task<List<Group>> ExcludeUserGroups(Guid userId, List<Group> groups)
+    {
+        var userGroupIds = (await _groupRepository.GetUserGroupsAsync(userId))
+            .Select(g => g.Group.Id)
+            .ToHashSet();
+
+        return groups.Where(g => !userGroupIds.Contains(g.Id)).ToList();
+    }
+
     private static GroupSearchResponse MapToGroupSearchResponse(Group group)
     {
         return new GroupSearchResponse
@@ -861,7 +911,8 @@ public class GroupService : IGroupService
             Name = group.Name,
             Description = group.Description,
             MemberCount = group.MemberCount,
-            IsPublic = group.IsPublic
+            IsPublic = group.IsPublic,
+            MaxMembers = group.MaxMembers
         };
     }
 

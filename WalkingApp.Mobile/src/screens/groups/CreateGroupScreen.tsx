@@ -17,6 +17,7 @@ import {
   HelperText,
   useTheme,
 } from 'react-native-paper';
+import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useGroupsStore } from '@store/groupsStore';
@@ -39,6 +40,7 @@ export default function CreateGroupScreen() {
   const [description, setDescription] = useState('');
   const [competitionType, setCompetitionType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [privacyType, setPrivacyType] = useState<'public' | 'private'>('public');
+  const [maxMembers, setMaxMembers] = useState('5');
 
   // Validation state
   const [nameError, setNameError] = useState<string | null>(null);
@@ -105,12 +107,19 @@ export default function CreateGroupScreen() {
       return;
     }
 
+    const parsedMaxMembers = parseInt(maxMembers, 10) || 5;
+    if (parsedMaxMembers < 1 || parsedMaxMembers > 50) {
+      Alert.alert('Error', 'Max members must be between 1 and 50');
+      return;
+    }
+
     try {
       const group = await createGroup({
         name: name.trim(),
         description: description.trim() || undefined,
         competition_type: competitionType,
         is_private: privacyType === 'private',
+        max_members: parsedMaxMembers,
       });
 
       // Navigate to the group detail screen
@@ -118,7 +127,7 @@ export default function CreateGroupScreen() {
     } catch (error) {
       Alert.alert('Error', getErrorMessage(error));
     }
-  }, [name, description, competitionType, privacyType, validateName, validateDescription, createGroup, navigation]);
+  }, [name, description, competitionType, privacyType, maxMembers, validateName, validateDescription, createGroup, navigation]);
 
   const competitionButtons = [
     { value: 'daily', label: 'Daily' },
@@ -258,6 +267,49 @@ export default function CreateGroupScreen() {
             )}
           </View>
 
+          {/* Max Members Section */}
+          <View style={styles.section}>
+            <Text
+              variant="titleSmall"
+              style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Max Members
+            </Text>
+            <Text
+              variant="bodySmall"
+              style={[styles.sectionDescription, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Maximum number of members allowed (1-50)
+            </Text>
+            <Slider
+              minimumValue={1}
+              maximumValue={50}
+              step={1}
+              value={parseInt(maxMembers, 10) || 5}
+              onValueChange={(value: number) => setMaxMembers(String(Math.round(value)))}
+              minimumTrackTintColor={theme.colors.primary}
+              maximumTrackTintColor={theme.colors.surfaceVariant}
+              thumbTintColor={theme.colors.primary}
+              style={styles.slider}
+              testID="max-members-slider"
+              accessibilityLabel="Maximum members slider"
+            />
+            <TextInput
+              label="Max Members"
+              value={maxMembers}
+              onChangeText={(text: string) => {
+                const numeric = text.replace(/[^0-9]/g, '');
+                setMaxMembers(numeric);
+              }}
+              mode="outlined"
+              style={styles.input}
+              keyboardType="number-pad"
+              maxLength={2}
+              testID="max-members-input"
+              accessibilityLabel="Maximum members input"
+            />
+          </View>
+
           {/* Create Button */}
           <View style={styles.buttonContainer}>
             <Button
@@ -309,6 +361,9 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 4,
+  },
+  slider: {
+    marginBottom: 8,
   },
   segmentedButtons: {
     marginTop: 4,

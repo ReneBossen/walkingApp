@@ -126,6 +126,7 @@ describe('CreateGroupScreen', () => {
     competition_type: 'weekly',
     is_private: false,
     member_count: 1,
+    max_members: 5,
     created_at: '2024-01-01T00:00:00Z',
     ...overrides,
   });
