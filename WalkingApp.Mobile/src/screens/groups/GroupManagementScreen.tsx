@@ -59,6 +59,7 @@ export default function GroupManagementScreen({ route }: Props) {
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [requireApproval, setRequireApproval] = useState(false);
+  const [maxMembers, setMaxMembers] = useState('5');
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -90,6 +91,7 @@ export default function GroupManagementScreen({ route }: Props) {
       setDescription(managementGroup.description || '');
       setIsPrivate(managementGroup.is_private);
       setRequireApproval(managementGroup.require_approval);
+      setMaxMembers(String(managementGroup.max_members ?? 5));
       setHasChanges(false);
     }
   }, [managementGroup]);
@@ -146,6 +148,11 @@ export default function GroupManagementScreen({ route }: Props) {
     setHasChanges(true);
   }, []);
 
+  const handleMaxMembersChange = useCallback((value: string) => {
+    setMaxMembers(value);
+    setHasChanges(true);
+  }, []);
+
   const handleBack = useCallback(() => {
     if (hasChanges) {
       Alert.alert(
@@ -169,6 +176,12 @@ export default function GroupManagementScreen({ route }: Props) {
       return;
     }
 
+    const parsedMaxMembers = parseInt(maxMembers, 10) || 5;
+    if (parsedMaxMembers < 1 || parsedMaxMembers > 50) {
+      Alert.alert('Error', 'Max members must be between 1 and 50');
+      return;
+    }
+
     setIsSaving(true);
     try {
       await updateGroup(groupId, {
@@ -176,6 +189,7 @@ export default function GroupManagementScreen({ route }: Props) {
         description: description.trim() || undefined,
         is_private: isPrivate,
         require_approval: requireApproval,
+        max_members: parsedMaxMembers,
       });
       setHasChanges(false);
       Alert.alert('Success', 'Group settings saved successfully');
@@ -184,7 +198,7 @@ export default function GroupManagementScreen({ route }: Props) {
     } finally {
       setIsSaving(false);
     }
-  }, [groupId, name, description, isPrivate, requireApproval, validateName, validateDescription, updateGroup]);
+  }, [groupId, name, description, isPrivate, requireApproval, maxMembers, validateName, validateDescription, updateGroup]);
 
   const handleCopyInviteCode = useCallback(async () => {
     if (inviteCode) {
@@ -427,6 +441,35 @@ export default function GroupManagementScreen({ route }: Props) {
                 accessibilityLabel={`Require admin approval toggle, currently ${requireApproval ? 'enabled' : 'disabled'}`}
               />
             </View>
+          </View>
+
+          <Divider style={styles.divider} />
+
+          {/* Max Members Section */}
+          <View style={styles.section}>
+            <Text
+              variant="titleSmall"
+              style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Max Members
+            </Text>
+            <Text
+              variant="bodySmall"
+              style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}
+            >
+              Maximum number of members allowed (1-50)
+            </Text>
+            <TextInput
+              label="Max Members"
+              value={maxMembers}
+              onChangeText={handleMaxMembersChange}
+              mode="outlined"
+              style={styles.input}
+              keyboardType="number-pad"
+              maxLength={2}
+              testID="max-members-input"
+              accessibilityLabel="Maximum members input"
+            />
           </View>
 
           <Divider style={styles.divider} />

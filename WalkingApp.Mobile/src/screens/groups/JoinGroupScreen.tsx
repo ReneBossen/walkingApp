@@ -68,7 +68,7 @@ function PublicGroupCard({ group, onJoin, isJoining, testID }: PublicGroupCardPr
               variant="bodySmall"
               style={{ color: theme.colors.onSurfaceVariant }}
             >
-              {group.member_count} {group.member_count === 1 ? 'member' : 'members'}
+              {group.member_count}/{group.max_members} members
             </Text>
             <Chip
               compact

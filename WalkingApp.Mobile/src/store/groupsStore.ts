@@ -12,6 +12,7 @@ export interface Group {
   competition_type: 'daily' | 'weekly' | 'monthly';
   is_private: boolean;
   member_count: number;
+  max_members: number;
   created_at: string;
 }
 
@@ -65,6 +66,8 @@ export interface CreateGroupData {
   description?: string;
   competition_type: 'daily' | 'weekly' | 'monthly';
   is_private: boolean;
+  /** Maximum number of members allowed (default 5, range 1-50) */
+  max_members?: number;
 }
 
 /**
@@ -91,6 +94,7 @@ export interface GroupManagementDetail {
   join_code?: string;
   created_by_id: string;
   member_count: number;
+  max_members: number;
   user_role?: 'owner' | 'admin' | 'member';
 }
 
@@ -102,6 +106,7 @@ export interface UpdateGroupData {
   description?: string;
   is_private?: boolean;
   require_approval?: boolean;
+  max_members?: number;
 }
 
 interface GroupsState {

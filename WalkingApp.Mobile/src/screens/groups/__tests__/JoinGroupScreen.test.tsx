@@ -141,6 +141,7 @@ describe('JoinGroupScreen', () => {
     competition_type: 'weekly',
     is_private: false,
     member_count: 10,
+    max_members: 5,
     created_at: '2024-01-01T00:00:00Z',
     ...overrides,
   });

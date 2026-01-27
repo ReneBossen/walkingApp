@@ -27,4 +27,9 @@ public class CreateGroupRequest
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public CompetitionPeriodType PeriodType { get; set; }
+
+    /// <summary>
+    /// Maximum number of members allowed in the group (1-50, default 5).
+    /// </summary>
+    public int MaxMembers { get; set; } = 5;
 }

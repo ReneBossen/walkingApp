@@ -19,4 +19,9 @@ public class UpdateGroupRequest
     /// Whether the group is public or private.
     /// </summary>
     public bool IsPublic { get; set; }
+
+    /// <summary>
+    /// Maximum number of members allowed in the group (1-50). Null means no change.
+    /// </summary>
+    public int? MaxMembers { get; set; }
 }

@@ -39,6 +39,7 @@ export default function CreateGroupScreen() {
   const [description, setDescription] = useState('');
   const [competitionType, setCompetitionType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [privacyType, setPrivacyType] = useState<'public' | 'private'>('public');
+  const [maxMembers, setMaxMembers] = useState('5');
 
   // Validation state
   const [nameError, setNameError] = useState<string | null>(null);
@@ -105,12 +106,19 @@ export default function CreateGroupScreen() {
       return;
     }
 
+    const parsedMaxMembers = parseInt(maxMembers, 10) || 5;
+    if (parsedMaxMembers < 1 || parsedMaxMembers > 50) {
+      Alert.alert('Error', 'Max members must be between 1 and 50');
+      return;
+    }
+
     try {
       const group = await createGroup({
         name: name.trim(),
         description: description.trim() || undefined,
         competition_type: competitionType,
         is_private: privacyType === 'private',
+        max_members: parsedMaxMembers,
       });
 
       // Navigate to the group detail screen
@@ -118,7 +126,7 @@ export default function CreateGroupScreen() {
     } catch (error) {
       Alert.alert('Error', getErrorMessage(error));
     }
-  }, [name, description, competitionType, privacyType, validateName, validateDescription, createGroup, navigation]);
+  }, [name, description, competitionType, privacyType, maxMembers, validateName, validateDescription, createGroup, navigation]);
 
   const competitionButtons = [
     { value: 'daily', label: 'Daily' },
@@ -256,6 +264,33 @@ export default function CreateGroupScreen() {
                 An invite code will be generated after creation
               </Text>
             )}
+          </View>
+
+          {/* Max Members Section */}
+          <View style={styles.section}>
+            <Text
+              variant="titleSmall"
+              style={[styles.sectionTitle, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Max Members
+            </Text>
+            <Text
+              variant="bodySmall"
+              style={[styles.sectionDescription, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Maximum number of members allowed (1-50)
+            </Text>
+            <TextInput
+              label="Max Members"
+              value={maxMembers}
+              onChangeText={setMaxMembers}
+              mode="outlined"
+              style={styles.input}
+              keyboardType="number-pad"
+              maxLength={2}
+              testID="max-members-input"
+              accessibilityLabel="Maximum members input"
+            />
           </View>
 
           {/* Create Button */}

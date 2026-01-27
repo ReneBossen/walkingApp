@@ -183,6 +183,7 @@ describe('GroupManagementScreen', () => {
     join_code: 'ABC123',
     created_by_id: 'owner-id',
     member_count: 10,
+    max_members: 5,
     user_role: 'owner',
     ...overrides,
   });

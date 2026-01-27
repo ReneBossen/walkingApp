@@ -12,6 +12,7 @@ interface GroupResponse {
   isPublic: boolean;
   periodType: 'Daily' | 'Weekly' | 'Monthly' | 'Custom';
   memberCount: number;
+  maxMembers: number;
   joinCode?: string;
   role: 'Owner' | 'Admin' | 'Member';
   createdAt: string;
@@ -26,6 +27,7 @@ interface GroupSearchResponse {
   name: string;
   description?: string;
   memberCount: number;
+  maxMembers: number;
   isPublic: boolean;
 }
 
@@ -95,6 +97,7 @@ function mapGroupResponseToGroup(response: GroupResponse): Group {
     competition_type: mapPeriodType(response.periodType),
     is_private: !response.isPublic,
     member_count: response.memberCount,
+    max_members: response.maxMembers,
     created_at: response.createdAt,
   };
 }
@@ -110,6 +113,7 @@ function mapSearchResponseToGroup(response: GroupSearchResponse): Group {
     competition_type: 'weekly', // Default, not included in search response
     is_private: !response.isPublic,
     member_count: response.memberCount,
+    max_members: response.maxMembers,
     created_at: '', // Not included in search response
   };
 }
@@ -179,6 +183,7 @@ export const groupsApi = {
           competition_type: mapPeriodType(group.periodType),
           is_private: !group.isPublic,
           member_count: group.memberCount,
+          max_members: group.maxMembers,
           created_at: group.createdAt,
           created_by_id: undefined, // Not provided by list endpoint
           join_code: group.joinCode,
@@ -235,6 +240,7 @@ export const groupsApi = {
       competition_type: mapPeriodType(response.periodType),
       is_private: !response.isPublic,
       member_count: response.memberCount,
+      max_members: response.maxMembers,
       created_at: response.createdAt,
       user_role: mapRole(response.role),
       join_code: response.joinCode,
@@ -281,6 +287,7 @@ export const groupsApi = {
       description: data.description,
       isPublic: !data.is_private,
       periodType: data.competition_type.charAt(0).toUpperCase() + data.competition_type.slice(1),
+      maxMembers: data.max_members ?? 5,
     };
 
     const response = await apiClient.post<GroupResponse>('/groups', request);
@@ -369,15 +376,19 @@ export const groupsApi = {
    * Update group details.
    * Uses backend API: PUT /api/v1/groups/{id}
    */
-  updateGroup: async (groupId: string, data: { name?: string; description?: string; is_private?: boolean; require_approval?: boolean }): Promise<void> => {
+  updateGroup: async (groupId: string, data: { name?: string; description?: string; is_private?: boolean; require_approval?: boolean; max_members?: number }): Promise<void> => {
     // Get current group to fill in required fields
     const currentGroup = await apiClient.get<GroupResponse>(`/groups/${groupId}`);
 
-    const request = {
+    const request: Record<string, unknown> = {
       name: data.name ?? currentGroup.name,
       description: data.description ?? currentGroup.description,
       isPublic: data.is_private !== undefined ? !data.is_private : currentGroup.isPublic,
     };
+
+    if (data.max_members !== undefined) {
+      request.maxMembers = data.max_members;
+    }
 
     await apiClient.put<GroupResponse>(`/groups/${groupId}`, request);
   },
@@ -491,6 +502,7 @@ export const groupsApi = {
       join_code: response.joinCode,
       created_by_id: '', // Not provided by backend yet
       member_count: response.memberCount,
+      max_members: response.maxMembers ?? 5,
       user_role: mapRole(response.role),
     };
   },

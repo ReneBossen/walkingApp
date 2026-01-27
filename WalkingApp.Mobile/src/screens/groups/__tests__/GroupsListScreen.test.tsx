@@ -131,6 +131,7 @@ describe('GroupsListScreen', () => {
     competition_type: 'weekly',
     is_private: false,
     member_count: 5,
+    max_members: 5,
     created_at: '2024-01-01T00:00:00Z',
     user_role: 'member',
     period_start: '2024-01-01',

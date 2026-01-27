@@ -49,4 +49,9 @@ public class Group
     /// Number of members in the group.
     /// </summary>
     public int MemberCount { get; set; }
+
+    /// <summary>
+    /// Maximum number of members allowed in the group.
+    /// </summary>
+    public int MaxMembers { get; set; } = 5;
 }

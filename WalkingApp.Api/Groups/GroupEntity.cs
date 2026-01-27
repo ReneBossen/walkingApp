@@ -33,6 +33,9 @@ public class GroupEntity : BaseModel
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
+    [Column("max_members")]
+    public int MaxMembers { get; set; } = 5;
+
     /// <summary>
     /// Converts the entity to a domain Group model.
     /// </summary>
@@ -48,7 +51,8 @@ public class GroupEntity : BaseModel
             JoinCode = JoinCode,
             PeriodType = ParsePeriodType(PeriodType),
             CreatedAt = CreatedAt,
-            MemberCount = memberCount
+            MemberCount = memberCount,
+            MaxMembers = MaxMembers
         };
     }
 
@@ -66,7 +70,8 @@ public class GroupEntity : BaseModel
             IsPublic = group.IsPublic,
             JoinCode = group.JoinCode,
             PeriodType = group.PeriodType.ToString().ToLowerInvariant(),
-            CreatedAt = group.CreatedAt
+            CreatedAt = group.CreatedAt,
+            MaxMembers = group.MaxMembers
         };
     }
 
