@@ -40,6 +40,9 @@ public class SupabaseClientFactory : ISupabaseClientFactory
         var client = new Client(_settings.Url, _settings.AnonKey, options);
         await client.InitializeAsync();
 
+        // Set the session so Postgrest resolves auth.uid() correctly for RLS policies
+        await client.Auth.SetSession(jwtToken, string.Empty);
+
         return client;
     }
 
