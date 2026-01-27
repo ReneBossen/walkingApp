@@ -19,6 +19,7 @@ import {
   HelperText,
   Snackbar,
 } from 'react-native-paper';
+import Slider from '@react-native-community/slider';
 import * as Clipboard from 'expo-clipboard';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -459,10 +460,31 @@ export default function GroupManagementScreen({ route }: Props) {
             >
               Maximum number of members allowed (1-50)
             </Text>
+            <Slider
+              minimumValue={1}
+              maximumValue={50}
+              step={1}
+              value={parseInt(maxMembers, 10) || 5}
+              onValueChange={(value: number) => {
+                const rounded = String(Math.round(value));
+                setMaxMembers(rounded);
+                setHasChanges(true);
+              }}
+              minimumTrackTintColor={theme.colors.primary}
+              maximumTrackTintColor={theme.colors.surfaceVariant}
+              thumbTintColor={theme.colors.primary}
+              style={styles.slider}
+              testID="max-members-slider"
+              accessibilityLabel="Maximum members slider"
+            />
             <TextInput
               label="Max Members"
               value={maxMembers}
-              onChangeText={handleMaxMembersChange}
+              onChangeText={(text: string) => {
+                const numeric = text.replace(/[^0-9]/g, '');
+                setMaxMembers(numeric);
+                setHasChanges(true);
+              }}
               mode="outlined"
               style={styles.input}
               keyboardType="number-pad"
@@ -644,6 +666,9 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 4,
+  },
+  slider: {
+    marginBottom: 8,
   },
   readOnlyField: {
     padding: 16,
