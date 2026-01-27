@@ -39,7 +39,7 @@ public class GroupsController : ControllerBase
 
         try
         {
-            var result = await _groupService.GetPublicGroupsAsync(limit);
+            var result = await _groupService.GetPublicGroupsAsync(userId.Value, limit);
             return Ok(ApiResponse<List<GroupSearchResponse>>.SuccessResponse(result));
         }
         catch (ArgumentException ex)
@@ -71,7 +71,7 @@ public class GroupsController : ControllerBase
 
         try
         {
-            var result = await _groupService.SearchPublicGroupsAsync(query, limit);
+            var result = await _groupService.SearchPublicGroupsAsync(userId.Value, query, limit);
             return Ok(ApiResponse<List<GroupSearchResponse>>.SuccessResponse(result));
         }
         catch (ArgumentException ex)

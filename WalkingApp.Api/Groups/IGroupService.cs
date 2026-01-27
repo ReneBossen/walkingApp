@@ -104,19 +104,21 @@ public interface IGroupService
     Task<GroupResponse> RegenerateJoinCodeAsync(Guid userId, Guid groupId);
 
     /// <summary>
-    /// Searches for public groups by name.
+    /// Searches for public groups by name, excluding groups the user is already a member of.
     /// </summary>
+    /// <param name="userId">The ID of the requesting user.</param>
     /// <param name="query">The search query (partial match on name).</param>
     /// <param name="limit">Maximum number of results to return.</param>
     /// <returns>List of matching public groups.</returns>
-    Task<List<GroupSearchResponse>> SearchPublicGroupsAsync(string query, int limit);
+    Task<List<GroupSearchResponse>> SearchPublicGroupsAsync(Guid userId, string query, int limit);
 
     /// <summary>
-    /// Gets a list of public groups.
+    /// Gets a list of public groups, excluding groups the user is already a member of.
     /// </summary>
+    /// <param name="userId">The ID of the requesting user.</param>
     /// <param name="limit">Maximum number of results to return.</param>
     /// <returns>List of public groups.</returns>
-    Task<List<GroupSearchResponse>> GetPublicGroupsAsync(int limit);
+    Task<List<GroupSearchResponse>> GetPublicGroupsAsync(Guid userId, int limit);
 
     /// <summary>
     /// Joins a group using an invite code.

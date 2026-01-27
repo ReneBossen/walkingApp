@@ -664,24 +664,28 @@ public class GroupService : IGroupService
     }
 
     /// <inheritdoc />
-    public async Task<List<GroupSearchResponse>> SearchPublicGroupsAsync(string query, int limit)
+    public async Task<List<GroupSearchResponse>> SearchPublicGroupsAsync(Guid userId, string query, int limit)
     {
+        ValidateUserId(userId);
         ValidateSearchQuery(query);
         ValidateSearchLimit(limit);
 
         var groups = await _groupRepository.SearchPublicGroupsAsync(query, limit);
+        var filtered = await ExcludeUserGroups(userId, groups);
 
-        return groups.Select(MapToGroupSearchResponse).ToList();
+        return filtered.Select(MapToGroupSearchResponse).ToList();
     }
 
     /// <inheritdoc />
-    public async Task<List<GroupSearchResponse>> GetPublicGroupsAsync(int limit)
+    public async Task<List<GroupSearchResponse>> GetPublicGroupsAsync(Guid userId, int limit)
     {
+        ValidateUserId(userId);
         ValidateSearchLimit(limit);
 
         var groups = await _groupRepository.GetPublicGroupsAsync(limit);
+        var filtered = await ExcludeUserGroups(userId, groups);
 
-        return groups.Select(MapToGroupSearchResponse).ToList();
+        return filtered.Select(MapToGroupSearchResponse).ToList();
     }
 
     /// <inheritdoc />
@@ -888,6 +892,15 @@ public class GroupService : IGroupService
     {
         if (userMembership.Role != MemberRole.Owner && userMembership.Role != MemberRole.Admin)
             throw new UnauthorizedAccessException("Only owners and admins can approve members.");
+    }
+
+    private async Task<List<Group>> ExcludeUserGroups(Guid userId, List<Group> groups)
+    {
+        var userGroupIds = (await _groupRepository.GetUserGroupsAsync(userId))
+            .Select(g => g.Group.Id)
+            .ToHashSet();
+
+        return groups.Where(g => !userGroupIds.Contains(g.Id)).ToList();
     }
 
     private static GroupSearchResponse MapToGroupSearchResponse(Group group)
