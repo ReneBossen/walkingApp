@@ -122,6 +122,11 @@ export default function GroupsListScreen() {
         <Appbar.Header elevated>
           <Appbar.Content title="Groups" />
           <Appbar.Action
+            icon="ticket-outline"
+            onPress={handleJoinGroup}
+            accessibilityLabel="Join with invite code"
+          />
+          <Appbar.Action
             icon="plus"
             onPress={handleCreateGroup}
             accessibilityLabel="Create group"
@@ -139,6 +144,11 @@ export default function GroupsListScreen() {
         <Appbar.Header elevated>
           <Appbar.Content title="Groups" />
           <Appbar.Action
+            icon="ticket-outline"
+            onPress={handleJoinGroup}
+            accessibilityLabel="Join with invite code"
+          />
+          <Appbar.Action
             icon="plus"
             onPress={handleCreateGroup}
             accessibilityLabel="Create group"
@@ -153,6 +163,11 @@ export default function GroupsListScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header elevated>
         <Appbar.Content title="Groups" />
+        <Appbar.Action
+          icon="ticket-outline"
+          onPress={handleJoinGroup}
+          accessibilityLabel="Join with invite code"
+        />
         <Appbar.Action
           icon="plus"
           onPress={handleCreateGroup}
