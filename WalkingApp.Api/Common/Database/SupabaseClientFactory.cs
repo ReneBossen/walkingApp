@@ -28,20 +28,11 @@ public class SupabaseClientFactory : ISupabaseClientFactory
 
         var options = new SupabaseOptions
         {
-            AutoConnectRealtime = false,
-            Headers = new Dictionary<string, string>
-            {
-                { "Authorization", $"Bearer {jwtToken}" },
-                { "apikey", _settings.AnonKey }
-            }
+            AutoConnectRealtime = false
         };
 
-        var client = new Client(_settings.Url, _settings.AnonKey, options);
+        var client = new Client(_settings.Url, _settings.ServiceRoleKey, options);
         await client.InitializeAsync();
-
-        // Ensure Postgrest sub-client has both required headers for auth.uid() to resolve
-        client.Postgrest.Options.Headers["Authorization"] = $"Bearer {jwtToken}";
-        client.Postgrest.Options.Headers["apikey"] = _settings.AnonKey;
 
         return client;
     }
