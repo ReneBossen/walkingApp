@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, StyleSheet, Platform, Pressable } from 'react-native';
+import { View, StyleSheet, Platform, Keyboard, ScrollView, TouchableWithoutFeedback } from 'react-native';
 import {
   Modal,
   Portal,
@@ -108,7 +108,14 @@ export function ManualStepEntryModal({
     setShowDatePicker(false);
   }, []);
 
+  const dismissKeyboard = useCallback(() => {
+    Keyboard.dismiss();
+  }, []);
+
   const handleSave = useCallback(async () => {
+    // Dismiss keyboard before processing
+    Keyboard.dismiss();
+
     const steps = parseInt(stepCount, 10);
     const distanceValue = distance ? parseFloat(distance) : undefined;
     const distanceMeters = distanceValue !== undefined
@@ -175,8 +182,13 @@ export function ManualStepEntryModal({
           { backgroundColor: theme.colors.surface },
         ]}
       >
-        {/* Header */}
-        <View style={styles.header}>
+        <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.header}>
           <Text
             variant="titleLarge"
             style={[styles.title, { color: theme.colors.onSurface }]}
@@ -304,18 +316,20 @@ export function ManualStepEntryModal({
           </HelperText>
         )}
 
-        {/* Save Button */}
-        <Button
-          mode="contained"
-          onPress={handleSave}
-          loading={isSubmitting}
-          disabled={isSubmitting || !isFormValid}
-          style={styles.saveButton}
-          testID="manual-entry-save-button"
-          accessibilityLabel="Save step entry"
-        >
-          Save Entry
-        </Button>
+            {/* Save Button */}
+            <Button
+              mode="contained"
+              onPress={handleSave}
+              loading={isSubmitting}
+              disabled={isSubmitting || !isFormValid}
+              style={styles.saveButton}
+              testID="manual-entry-save-button"
+              accessibilityLabel="Save step entry"
+            >
+              Save Entry
+            </Button>
+          </ScrollView>
+        </TouchableWithoutFeedback>
       </Modal>
     </Portal>
   );
