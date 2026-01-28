@@ -76,6 +76,12 @@
           "healthUpdatePermission": "Stepper needs permission to save step data."
         }
       ],
+      [
+        "react-native-health-connect",
+        {
+          "requestPermissionsRationale": "Stepper needs access to your health data to automatically track your daily steps."
+        }
+      ],
       "@react-native-community/datetimepicker",
       "expo-background-task"
     ],

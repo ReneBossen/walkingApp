@@ -1,17 +1,16 @@
-import GoogleFit, { Scopes, BucketUnit } from 'react-native-google-fit';
+import {
+  initialize,
+  requestPermission,
+  readRecords,
+  getSdkStatus,
+  SdkAvailabilityStatus,
+} from 'react-native-health-connect';
 import {
   HealthDataProvider,
   AuthorizationStatus,
   DailyStepData,
 } from './types';
 import { getErrorMessage } from '../../utils/errorUtils';
-
-/**
- * Google Fit authorization options with required scopes.
- */
-const authOptions = {
-  scopes: [Scopes.FITNESS_ACTIVITY_READ, Scopes.FITNESS_LOCATION_READ],
-};
 
 /**
  * Formats a Date object to YYYY-MM-DD string format.
@@ -24,100 +23,91 @@ function formatDateToYYYYMMDD(date: Date): string {
 }
 
 /**
- * Google Fit step data response structure.
- */
-interface GoogleFitStepSample {
-  date: string;
-  value: number;
-  source?: string;
-}
-
-/**
- * Google Fit distance data response structure.
- */
-interface GoogleFitDistanceSample {
-  date: string;
-  distance: number;
-  source?: string;
-}
-
-/**
- * Google Fit service implementation for Android.
- * Provides access to Google Fit step and distance data.
+ * Health Connect service implementation for Android.
+ * Uses Android's Health Connect API (successor to Google Fit).
  */
 export class GoogleFitService implements HealthDataProvider {
-  private hasAuthorized = false;
+  private isInitialized = false;
+  private hasPermission = false;
 
   /**
-   * Checks if Google Fit is available on this device.
-   * Google Fit requires Google Play Services to be installed.
+   * Checks if Health Connect is available on this device.
+   * Health Connect requires Android 14+ or the Health Connect app installed.
    */
   async isAvailable(): Promise<boolean> {
     try {
-      // Google Fit availability check
-      // The library doesn't expose a direct isAvailable method,
-      // but authorization will fail if Google Play Services aren't available
-      return true;
+      const status = await getSdkStatus();
+      return status === SdkAvailabilityStatus.SDK_AVAILABLE;
     } catch (error) {
-      console.warn('[GoogleFitService] isAvailable error:', getErrorMessage(error));
+      console.warn('[HealthConnectService] isAvailable error:', getErrorMessage(error));
       return false;
     }
   }
 
   /**
-   * Gets the current authorization status for Google Fit access.
+   * Gets the current authorization status for Health Connect access.
    */
   async getAuthorizationStatus(): Promise<AuthorizationStatus> {
     try {
-      // Check if we've previously authorized in this session
-      if (this.hasAuthorized) {
+      const available = await this.isAvailable();
+      if (!available) {
+        return 'not_available';
+      }
+
+      if (this.hasPermission) {
         return 'authorized';
       }
 
-      // Try to check authorization status
-      // Note: checkIsAuthorized() sets an internal flag
-      await GoogleFit.checkIsAuthorized();
-
-      if (GoogleFit.isAuthorized) {
-        this.hasAuthorized = true;
-        return 'authorized';
+      // Initialize if not already done
+      if (!this.isInitialized) {
+        const initialized = await initialize();
+        this.isInitialized = initialized;
+        if (!initialized) {
+          return 'not_available';
+        }
       }
 
       return 'not_determined';
     } catch (error) {
-      console.warn('[GoogleFitService] getAuthorizationStatus error:', getErrorMessage(error));
+      console.warn('[HealthConnectService] getAuthorizationStatus error:', getErrorMessage(error));
       return 'not_available';
     }
   }
 
   /**
-   * Requests user authorization to access Google Fit data.
-   * This will display the Google Fit permission prompt.
+   * Requests user authorization to access Health Connect data.
+   * This will display the Health Connect permission prompt.
    */
   async requestAuthorization(): Promise<AuthorizationStatus> {
     try {
-      const authResult = await GoogleFit.authorize(authOptions);
+      // Initialize first if needed
+      if (!this.isInitialized) {
+        const initialized = await initialize();
+        this.isInitialized = initialized;
+        if (!initialized) {
+          return 'not_available';
+        }
+      }
 
-      if (authResult.success) {
-        this.hasAuthorized = true;
+      // Request permissions for steps and distance
+      const permissions = await requestPermission([
+        { accessType: 'read', recordType: 'Steps' },
+        { accessType: 'read', recordType: 'Distance' },
+      ]);
+
+      // Check if we got the permissions we need
+      const hasStepsPermission = permissions.some(
+        (p) => p.recordType === 'Steps' && p.accessType === 'read'
+      );
+
+      if (hasStepsPermission) {
+        this.hasPermission = true;
         return 'authorized';
       }
 
-      // Type narrow to the failure case which has a message property
-      const failureResult = authResult as { success: false; message: string };
-
-      // Check if the user denied permission
-      if (
-        failureResult.message?.includes('denied') ||
-        failureResult.message?.includes('cancel')
-      ) {
-        return 'denied';
-      }
-
-      console.warn('[GoogleFitService] Authorization failed:', failureResult.message);
-      return 'not_available';
+      return 'denied';
     } catch (error) {
-      console.warn('[GoogleFitService] requestAuthorization error:', getErrorMessage(error));
+      console.warn('[HealthConnectService] requestAuthorization error:', getErrorMessage(error));
       return 'not_available';
     }
   }
@@ -128,7 +118,7 @@ export class GoogleFitService implements HealthDataProvider {
    *
    * @param startDate - Start of the date range (inclusive)
    * @param endDate - End of the date range (inclusive)
-   * @returns Array of daily step data from Google Fit
+   * @returns Array of daily step data from Health Connect
    */
   async getStepData(startDate: Date, endDate: Date): Promise<DailyStepData[]> {
     try {
@@ -137,162 +127,75 @@ export class GoogleFitService implements HealthDataProvider {
       if (status !== 'authorized') {
         const authResult = await this.requestAuthorization();
         if (authResult !== 'authorized') {
-          console.warn('[GoogleFitService] Not authorized to fetch step data');
+          console.warn('[HealthConnectService] Not authorized to fetch step data');
           return [];
         }
       }
 
-      // Set end date to end of day to include the full day
-      const adjustedEndDate = new Date(endDate);
-      adjustedEndDate.setHours(23, 59, 59, 999);
+      // Set time range
+      const timeRangeFilter = {
+        operator: 'between' as const,
+        startTime: startDate.toISOString(),
+        endTime: new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString(), // End of day
+      };
 
       // Fetch steps and distance in parallel
-      const [steps, distances] = await Promise.all([
-        this.fetchDailySteps(startDate, adjustedEndDate),
-        this.fetchDailyDistance(startDate, adjustedEndDate),
+      const [stepsResult, distanceResult] = await Promise.all([
+        readRecords('Steps', { timeRangeFilter }),
+        readRecords('Distance', { timeRangeFilter }).catch(() => ({ records: [] })),
       ]);
 
-      // Create a map of distances by date for easy lookup
-      const distanceByDate = new Map<string, number>();
-      for (const distance of distances) {
-        distanceByDate.set(distance.date, distance.distance);
+      // Aggregate steps by date
+      const stepsByDate = new Map<string, number>();
+      for (const record of stepsResult.records) {
+        const date = formatDateToYYYYMMDD(new Date(record.startTime));
+        const current = stepsByDate.get(date) ?? 0;
+        stepsByDate.set(date, current + (record.count ?? 0));
       }
 
-      // Combine steps with distances
-      const result: DailyStepData[] = steps.map((step) => ({
-        date: step.date,
-        stepCount: Math.round(step.value),
-        distanceMeters: distanceByDate.get(step.date) ?? 0,
-        source: 'googlefit' as const,
-      }));
+      // Aggregate distance by date
+      const distanceByDate = new Map<string, number>();
+      for (const record of distanceResult.records) {
+        const date = formatDateToYYYYMMDD(new Date(record.startTime));
+        const current = distanceByDate.get(date) ?? 0;
+        // Distance is in meters
+        const meters = record.distance?.inMeters ?? 0;
+        distanceByDate.set(date, current + meters);
+      }
+
+      // Combine into result
+      const result: DailyStepData[] = [];
+      for (const [date, stepCount] of stepsByDate) {
+        result.push({
+          date,
+          stepCount: Math.round(stepCount),
+          distanceMeters: Math.round(distanceByDate.get(date) ?? 0),
+          source: 'googlefit' as const,
+        });
+      }
+
+      // Sort by date
+      result.sort((a, b) => a.date.localeCompare(b.date));
 
       return result;
     } catch (error) {
-      console.error('[GoogleFitService] getStepData error:', getErrorMessage(error));
+      console.error('[HealthConnectService] getStepData error:', getErrorMessage(error));
       return [];
     }
   }
 
   /**
-   * Disconnects from Google Fit and revokes access.
+   * Disconnects from Health Connect.
+   * Note: Health Connect doesn't have a direct disconnect - users manage permissions in settings.
    */
   async disconnect(): Promise<void> {
-    try {
-      // GoogleFit.disconnect() is synchronous and returns void
-      GoogleFit.disconnect();
-      this.hasAuthorized = false;
-    } catch (error) {
-      console.warn('[GoogleFitService] disconnect error:', getErrorMessage(error));
-      // Reset state even if disconnect fails
-      this.hasAuthorized = false;
-    }
-  }
-
-  /**
-   * Fetches daily step count samples from Google Fit.
-   */
-  private async fetchDailySteps(
-    startDate: Date,
-    endDate: Date
-  ): Promise<GoogleFitStepSample[]> {
-    try {
-      const options = {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        bucketUnit: BucketUnit.DAY,
-        bucketInterval: 1,
-      };
-
-      const result = await GoogleFit.getDailyStepCountSamples(options);
-
-      if (!result || !Array.isArray(result)) {
-        return [];
-      }
-
-      // Google Fit returns data grouped by source
-      // We need to aggregate across all sources
-      const stepsByDate = new Map<string, number>();
-
-      for (const sourceData of result) {
-        // Process the 'steps' array which contains { date: string, value: number }
-        if (sourceData.steps && Array.isArray(sourceData.steps)) {
-          for (const sample of sourceData.steps) {
-            const date = formatDateToYYYYMMDD(new Date(sample.date));
-            const currentSteps = stepsByDate.get(date) ?? 0;
-            // Use the higher value if we have multiple sources
-            const newValue = sample.value ?? 0;
-            stepsByDate.set(date, Math.max(currentSteps, newValue));
-          }
-        }
-
-        // Process rawSteps if available (different structure: startDate, steps)
-        if (sourceData.rawSteps && Array.isArray(sourceData.rawSteps)) {
-          for (const rawSample of sourceData.rawSteps) {
-            const date = formatDateToYYYYMMDD(new Date(rawSample.startDate));
-            const currentSteps = stepsByDate.get(date) ?? 0;
-            const newValue = rawSample.steps ?? 0;
-            stepsByDate.set(date, Math.max(currentSteps, newValue));
-          }
-        }
-      }
-
-      return Array.from(stepsByDate.entries()).map(([date, value]) => ({
-        date,
-        value,
-      }));
-    } catch (error) {
-      console.warn('[GoogleFitService] fetchDailySteps error:', getErrorMessage(error));
-      return [];
-    }
-  }
-
-  /**
-   * Fetches daily distance samples from Google Fit.
-   * Returns distance in meters.
-   */
-  private async fetchDailyDistance(
-    startDate: Date,
-    endDate: Date
-  ): Promise<GoogleFitDistanceSample[]> {
-    try {
-      const options = {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        bucketUnit: BucketUnit.DAY,
-        bucketInterval: 1,
-      };
-
-      const result = await GoogleFit.getDailyDistanceSamples(options);
-
-      if (!result || !Array.isArray(result)) {
-        return [];
-      }
-
-      // Aggregate distances by date
-      const distanceByDate = new Map<string, number>();
-
-      for (const sample of result) {
-        // DistanceResponse uses startDate, not date
-        const date = formatDateToYYYYMMDD(new Date(sample.startDate));
-        const currentDistance = distanceByDate.get(date) ?? 0;
-        // Distance is returned in meters
-        const newDistance = sample.distance ?? 0;
-        distanceByDate.set(date, Math.max(currentDistance, newDistance));
-      }
-
-      return Array.from(distanceByDate.entries()).map(([date, distance]) => ({
-        date,
-        distance,
-      }));
-    } catch (error) {
-      console.warn('[GoogleFitService] fetchDailyDistance error:', getErrorMessage(error));
-      return [];
-    }
+    this.hasPermission = false;
+    this.isInitialized = false;
   }
 }
 
 /**
- * Factory function to create a GoogleFitService instance.
+ * Factory function to create a GoogleFitService (Health Connect) instance.
  */
 export function createGoogleFitService(): GoogleFitService {
   return new GoogleFitService();
