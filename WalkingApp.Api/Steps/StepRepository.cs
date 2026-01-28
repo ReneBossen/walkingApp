@@ -252,10 +252,16 @@ public class StepRepository : IStepRepository
         DateOnly date,
         string? source)
     {
-        var response = await client
+        var query = client
             .From<StepEntryEntity>()
-            .Where(x => x.UserId == userId && x.Date == date && x.Source == source)
-            .Single();
+            .Filter("user_id", Supabase.Postgrest.Constants.Operator.Equals, userId.ToString())
+            .Filter("date", Supabase.Postgrest.Constants.Operator.Equals, date.ToString("yyyy-MM-dd"));
+
+        query = source != null
+            ? query.Filter("source", Supabase.Postgrest.Constants.Operator.Equals, source)
+            : query.Filter("source", Supabase.Postgrest.Constants.Operator.Is, "null");
+
+        var response = await query.Single();
 
         return response;
     }
