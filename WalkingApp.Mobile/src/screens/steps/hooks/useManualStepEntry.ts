@@ -177,14 +177,18 @@ export function useManualStepEntry() {
       // Format date as YYYY-MM-DD
       const dateString = date.toISOString().split('T')[0];
 
-      const request: RecordStepsRequest = {
-        stepCount: finalStepCount,
-        distanceMeters: finalDistance,
-        date: dateString,
-        source: 'manual',
-      };
-
-      await stepsApi.addSteps(request);
+      // Use syncSteps which does UPSERT (insert or update)
+      // This avoids duplicate key errors when an entry already exists
+      await stepsApi.syncSteps({
+        entries: [
+          {
+            date: dateString,
+            stepCount: finalStepCount,
+            distanceMeters: finalDistance,
+            source: 'manual',
+          },
+        ],
+      });
 
       // Refresh step data after successful submission
       await Promise.all([fetchTodaySteps(), fetchStats()]);
